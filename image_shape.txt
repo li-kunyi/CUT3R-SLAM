@@ -1,0 +1,106 @@
+image.shape: (1, 3, 472, 640)
+
+Args:
+{
+    "imagedir": "/home/kunyi/work/data/scannet/scene0059_00/color",
+    "posedir": null,
+    "calib": "calib/scannet.txt",
+    "config": "config/scannet_config.yaml",
+    "output": "outputs/scannet_test_1101_3/scene0059",
+    "gtdepthdir": null,
+    "weights": "pretrained_models/droid.pth",
+    "buffer": 330,
+    "undistort": false,
+    "cropborder": 20,
+    "droidvis": false,
+    "gsvis": false,
+    "start": 0,
+    "length": 100000,
+    "ckpt_path": "./checkpoints/spann3r.pth",
+    "image_size": [
+        368,
+        512
+    ]
+}
+
+Cfg:
+{
+    "Dataset": {
+        "pcd_downsample": 4,
+        "pcd_downsample_init": 4,
+        "adaptive_pointsize": true,
+        "point_size": 1.0,
+        "scale_multiplier": 2.0
+    },
+    "Cam": {
+        "dataset": "scannet",
+        "H": 480,
+        "W": 640,
+        "fx": 577.590698,
+        "fy": 578.729797,
+        "cx": 318.905426,
+        "cy": 242.683609,
+        "png_depth_scale": 1000.0,
+        "crop_edge": 16
+    },
+    "Tracking": {
+        "motion_filter": {
+            "init_thresh": 4.0,
+            "thresh": 2.4,
+            "skip_blur": false
+        },
+        "frontend": {
+            "keyframe_thresh": 4.0,
+            "frontend_thresh": 16.0,
+            "frontend_window": 25,
+            "frontend_radius": 2,
+            "frontend_nms": 1,
+            "mono_depth_alpha": 0.01,
+            "iteration": 1000
+        },
+        "backend": {
+            "backend_thresh": 40.0,
+            "backend_radius": 2,
+            "backend_nms": 1,
+            "covis_thresh": 0.2
+        },
+        "pgba": {
+            "active": true,
+            "pgba_thresh": 22.0
+        }
+    },
+    "Mapping": {
+        "itr_num": 50,
+        "gaussian_update_every": 50,
+        "gaussian_update_offset": 25
+    },
+    "Training": {
+        "gaussian_update_every": 200,
+        "lambda_depth": 5.0,
+        "lambda_normal": 0.05,
+        "lambda_tv": 0.0,
+        "lambda_iso": 10.0,
+        "gaussian_th": 0.1,
+        "gaussian_extent": 1.0,
+        "gaussian_reset": 3001,
+        "size_threshold": 20,
+        "window_size": 10,
+        "rgb_boundary_threshold": 0.01,
+        "compensate_exposure": true
+    },
+    "opt_params": {
+        "pose_lr": 0.0005,
+        "scale_lr": 0.001,
+        "position_lr_init": 0.0005,
+        "position_lr_final": 5e-06,
+        "position_lr_max_steps": 20000,
+        "feature_lr": 0.005,
+        "opacity_lr": 0.05,
+        "scaling_lr": 0.001,
+        "rotation_lr": 0.001,
+        "exposure_lr": 0.01,
+        "percent_dense": 0.01,
+        "lambda_dssim": 0.2,
+        "densify_grad_threshold": 0.0004
+    }
+}
