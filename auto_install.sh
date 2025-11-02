@@ -1,8 +1,8 @@
 #!/bin/bash
-set -e  # 出现错误立即退出
+set -e  # Exit immediately if a command exits with a non-zero status
 
 # -----------------------------
-# 1. 安装 Anaconda（静默模式）
+# 1. Install Anaconda (silent mode)
 # -----------------------------
 ANACONDA_INSTALLER="/mnt/home/code/anaconda.sh"
 INSTALL_DIR="$HOME/anaconda3"
@@ -15,13 +15,13 @@ else
 fi
 
 # -----------------------------
-# 2. 初始化 conda
+# 2. Initialize conda
 # -----------------------------
 echo "Initializing conda..."
 eval "$($INSTALL_DIR/bin/conda shell.bash hook)"
 
 # -----------------------------
-# 3. 创建 superslam 环境
+# 3. Create superslam environment
 # -----------------------------
 ENV_NAME="superslam"
 PYTHON_VERSION="3.9"
@@ -34,12 +34,12 @@ else
 fi
 
 # -----------------------------
-# 4. 激活环境
+# 4. Activate environment
 # -----------------------------
 conda activate "$ENV_NAME"
 
 # -----------------------------
-# 5. 安装 PyTorch + CUDA
+# 5. Install PyTorch + CUDA
 # -----------------------------
 echo "Installing PyTorch with CUDA 12.1..."
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
@@ -48,7 +48,7 @@ echo "Installing CUDA toolkit..."
 conda install -y -c "nvidia/label/cuda-12.1.0" cuda-toolkit
 
 # -----------------------------
-# 6. 安装 requirements.txt
+# 6. Install requirements.txt
 # -----------------------------
 if [ -f "requirement.txt" ]; then
     echo "Installing Python dependencies from requirement.txt..."
@@ -58,7 +58,7 @@ else
 fi
 
 # -----------------------------
-# 7. 安装 RaDe-GS rasterizer
+# 7. Install RaDe-GS rasterizer
 # -----------------------------
 if [ -d "thirdparty/diff-gaussian-rasterization" ]; then
     pip install thirdparty/diff-gaussian-rasterization
@@ -68,27 +68,27 @@ if [ -d "thirdparty/simple-knn" ]; then
 fi
 
 # -----------------------------
-# 8. 安装 CUT3R 依赖
+# 8. Install CUT3R dependencies
 # -----------------------------
 echo "Installing CUT3R dependencies..."
 conda install -y 'llvm-openmp<16'  # for training logging
 pip install evo
 pip install open3d
 
-# 编译 RoPE cuda kernels
+# Compile RoPE CUDA kernels
 if [ -d "src/croco/models/curope" ]; then
-    echo "Compiling RoPE cuda kernels..."
+    echo "Compiling RoPE CUDA kernels..."
     cd src/croco/models/curope/
     python setup.py build_ext --inplace
     cd ../../../../
 fi
 
 # -----------------------------
-# 9. 安装 Lietorch
+# 9. Install Lietorch
 # -----------------------------
-if [ -d "thirdpary/lietorch" ]; then
+if [ -d "thirdparty/lietorch" ]; then
     echo "Installing Lietorch..."
-    cd thirdpary/lietorch
+    cd thirdparty/lietorch
     python setup.py install
     cd ../../
 fi

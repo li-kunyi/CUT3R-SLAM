@@ -78,7 +78,7 @@ def mono_stream(imagedir, calib, undistort=False, cropborder=False, start=0, len
         intrinsics_ds[3] *= (h1 / h0)
 
         # for gaussian mapping
-        h2 = int(512 / w0 * h0)
+        h2 = int(512 / w0 * h0) // 2 * 2
         w2 = 512
         image = cv2.resize(image, (w2, h2))
         image = torch.as_tensor(image).permute(2, 0, 1)

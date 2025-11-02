@@ -12,11 +12,11 @@
             "program": "demo_s.py",
             "args": [
                 // "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
-                "--imagedir", "/home/dataset/scannet/scene0059_00/color",
+                "--imagedir", "/mnt/home/dataset/7scenes/chess/seq-01/color",
                 // "--imagedir", "data/ScanNet/scene0000_00",
-                "--calib", "calib/scannet.txt",
-                "--config", "config/scannet_config.yaml",
-                "--output", "outputs/scannet_test_1101_3/scene0059",
+                "--calib", "calib/tum.txt",
+                "--config", "config/tum_config.yaml",
+                "--output", "outputs/test/7scenes",
                 "--cropborder", "20",
                 // "--undistort"
                 // "--start", "5240",

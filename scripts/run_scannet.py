@@ -24,7 +24,7 @@ for i, seq in enumerate(seqs):
 
     # eval ate
     if not os.path.exists(f'{out}/{name}/ape.txt') or len(open(f'{out}/{name}/ape.txt').readlines()) < 10:
-        os.system(f'evo_ape tum {seq}/traj.txt {out}/{name}/traj_full.txt -vas --no_warnings > {out}/{name}/ape.txt')
+        os.system(f'evo_ape tum {seq}/traj.txt {out}/{name}/traj_kf.txt -vas --no_warnings > {out}/{name}/ape.txt')
     ATE = float([i for i in open(f'{out}/{name}/ape.txt').readlines() if 'rmse' in i][0][-10:-1]) * 100
     metrics['ATE full'] += ATE
     print(f'- full ATE: {ATE:.4f}')

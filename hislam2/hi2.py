@@ -207,8 +207,9 @@ class Hi2:
                                                  kf_sub_idx)
 
         updated_poses = self.mapper.finalize()
-        updated_poses = updated_poses[:last_kf_idx]
-        self.keyframes.pose[:last_kf_idx] = torch.tensor(updated_poses)
+        N = min(len(updated_poses), last_kf_idx)
+        updated_poses = updated_poses[:N]
+        self.keyframes.pose[:N] = torch.tensor(updated_poses)
 
         traj_full = self.keyframes.pose
         if fill:

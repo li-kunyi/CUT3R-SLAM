@@ -2,12 +2,12 @@
 # export PATH=$CUDA_HOME/bin:$PATH
 # export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 
-bash /mnt/home/code/anaconda.sh -b
-# source ~/anaconda3/bin/activate
-eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
+# bash /mnt/home/code/anaconda.sh -b
+# # source ~/anaconda3/bin/activate
+# eval "$($HOME/anaconda3/bin/conda shell.bash hook)"
 
-conda create -y -n superslam python=3.9
-conda activate superslam
+# conda create -y -n superslam python=3.9
+# conda activate superslam
 
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 conda install -y -c "nvidia/label/cuda-12.1.0" cuda-toolkit
@@ -21,15 +21,15 @@ pip install thirdparty/simple-knn/
 # CUT3R
 conda install 'llvm-openmp<16'# for training logging
 # for evaluation
-pip install evo
-pip install open3d
+# pip install evo
+# pip install open3d
 # Compile the cuda kernels for RoPE (as in CroCo v2)
 cd src/croco/models/curope/
 python setup.py build_ext --inplace
 cd ../../../../
 
 # Lietorch
-cd thirdpary/lietorch
+cd thirdparty/lietorch
 python setup.py install
 cd ../../
 

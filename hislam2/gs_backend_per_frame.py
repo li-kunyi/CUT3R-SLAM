@@ -751,7 +751,7 @@ class GSBackEnd(mp.Process):
         confs = packet['confs'].numpy()
         c2w = pose_vec_to_matrix(packet["poses"]).cuda()
         w2c = torch.inverse(c2w)
-
+        
         _, self.h, self.w, _ = pointmaps.shape
         imgs_ds = imgs[..., ::self.downsample_ratio, ::self.downsample_ratio]
         pointmaps = F.interpolate(pointmaps.permute(0, 3, 1, 2), size=(H//self.downsample_ratio, W//self.downsample_ratio), mode='bilinear', align_corners=False).permute(0, 2, 3, 1).numpy()
