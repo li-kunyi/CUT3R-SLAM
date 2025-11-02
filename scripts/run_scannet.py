@@ -17,7 +17,7 @@ for i, seq in enumerate(seqs):
     print(name, out)
 
     # run HI-SLAM2
-    cmd = f"python demo.py --imagedir {seq}/color --calib {seq}/calib.txt --cropborder 20 --config config/scannet_config.yaml "
+    cmd = f"python demo_s.py --imagedir {seq}/color --calib {seq}/calib.txt --cropborder 20 --config config/scannet_config.yaml "
     cmd += f'--output {out}/{name} > {out}/{name}/log.txt'
     if not os.path.exists(f'{out}/{name}/traj_full.txt'):
         os.system(cmd)

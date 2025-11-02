@@ -11,7 +11,7 @@ out = 'outputs/tum'
 dataset_path="/mnt/home/dataset/tum/"
 os.makedirs(f'{out}/meshes', exist_ok=True)
 seqs = [
-    "rgbd_dataset_freiburg1_360",
+    # "rgbd_dataset_freiburg1_360",
     "rgbd_dataset_freiburg1_desk",
     "rgbd_dataset_freiburg1_desk2",
     "rgbd_dataset_freiburg1_floor",

@@ -1,6 +1,0 @@
-README.md
-setup.py
-droid_backends.egg-info/PKG-INFO
-droid_backends.egg-info/SOURCES.txt
-droid_backends.egg-info/dependency_links.txt
-droid_backends.egg-info/top_level.txt
