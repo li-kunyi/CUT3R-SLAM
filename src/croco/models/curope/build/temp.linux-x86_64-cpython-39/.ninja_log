@@ -1,3 +1,18 @@
 # ninja log v7
 0	14887	1761756522404090429	/home/kunyi/work/code/CUT3R/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	a9dfa042c76edca6
 0	173282	1761756522404090429	/home/kunyi/work/code/CUT3R/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/kernels.o	eb44d5c18fc1ed8c
+181	19102	1762029703565807205	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c
+411	170031	1762029703793803523	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/kernels.o	34892b84d95ce1aa
+342	17451	1762031686365864698	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c
+631	168528	1762031686597861011	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/kernels.o	34892b84d95ce1aa
+320	23736	1762033222597955820	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c
+1370	249542	1762033223029950295	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/kernels.o	34892b84d95ce1aa
+1151	19080	1762034437494456449	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c
+164	21178	1762037006208193419	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	db3d8ab168ad430b
+33	20030	1762038347303708534	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c
+50	236884	1762038347323708169	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/kernels.o	34892b84d95ce1aa
+539	21683	1762041661111221269	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c
+706	240835	1762041661143220684	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/kernels.o	34892b84d95ce1aa
+43295	212160	1762041847504621371	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/kernels.o	34892b84d95ce1aa
+814	17438	1762050218864077505	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c
+129	17756	1762078253714335068	/mnt/home/code/CUT3R-SLAM/src/croco/models/curope/build/temp.linux-x86_64-cpython-39/curope.o	8082cbe8590ca17c

@@ -1,0 +1,6 @@
+[submodule "thirdparty/simple-knn"]
+	path = thirdparty/simple-knn
+	url = https://gitlab.inria.fr/bkerbl/simple-knn
+[submodule "thirdparty/lietorch"]
+	path = thirdparty/lietorch
+	url = https://github.com/princeton-vl/lietorch

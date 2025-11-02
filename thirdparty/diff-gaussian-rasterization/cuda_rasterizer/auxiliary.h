@@ -156,6 +156,7 @@ __forceinline__ __device__ bool in_frustum(int idx,
 	const float* orig_points,
 	const float* viewmatrix,
 	const float* projmatrix,
+	bool prefiltered,
 	float3& p_view)
 {
 	float3 p_orig = { orig_points[3 * idx], orig_points[3 * idx + 1], orig_points[3 * idx + 2] };
@@ -168,6 +169,11 @@ __forceinline__ __device__ bool in_frustum(int idx,
 
 	if (p_view.z <= 0.2f)// || ((p_proj.x < -1.3 || p_proj.x > 1.3 || p_proj.y < -1.3 || p_proj.y > 1.3)))
 	{
+		if (prefiltered)
+		{
+			printf("Point is filtered although prefiltered is set. This shouldn't happen!");
+			__trap();
+		}
 		return false;
 	}
 	return true;
@@ -393,6 +399,15 @@ namespace glm_modification
 
 		return D;
 	}
+}
+
+#define CHECK_CUDA(A, debug) \
+A; if(debug) { \
+auto ret = cudaDeviceSynchronize(); \
+if (ret != cudaSuccess) { \
+std::cerr << "\n[CUDA ERROR] in " << __FILE__ << "\nLine " << __LINE__ << ": " << cudaGetErrorString(ret); \
+throw std::runtime_error(cudaGetErrorString(ret)); \
+} \
 }
 
 #endif

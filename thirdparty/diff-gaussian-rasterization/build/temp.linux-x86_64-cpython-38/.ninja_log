@@ -1,6 +1,0 @@
-# ninja log v5
-1	1732	1738332745695164639	/home/kunyi/work/code/HI-SLAM2/thirdparty/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-38/cuda_rasterizer/backward.o	56b70c95a2f8af0e
-1	1820	1738332745783165653	/home/kunyi/work/code/HI-SLAM2/thirdparty/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-38/cuda_rasterizer/forward.o	4913cdc972149179
-1	5527	1738332749487208317	/home/kunyi/work/code/HI-SLAM2/thirdparty/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-38/cuda_rasterizer/rasterizer_impl.o	92d22e4b8f552bf3
-1	14475	1738332758427311283	/home/kunyi/work/code/HI-SLAM2/thirdparty/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-38/ext.o	c55d7f93a1d1823d
-1	30009	1738332773967490233	/home/kunyi/work/code/HI-SLAM2/thirdparty/diff-gaussian-rasterization/build/temp.linux-x86_64-cpython-38/rasterize_points.o	e2ad20e3ef7b120e

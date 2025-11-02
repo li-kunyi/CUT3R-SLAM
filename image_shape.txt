@@ -1,17 +1,17 @@
-image.shape: (1, 3, 472, 640)
+image.shape: (1, 3, 382, 512)
 
 Args:
 {
-    "imagedir": "/home/kunyi/work/data/scannet/scene0059_00/color",
+    "imagedir": "/mnt/home/dataset/scannet/scene0000_00/color",
     "posedir": null,
     "calib": "calib/scannet.txt",
     "config": "config/scannet_config.yaml",
-    "output": "outputs/scannet_test_1101_3/scene0059",
+    "output": "outputs/scannet/scene0000",
     "gtdepthdir": null,
-    "weights": "pretrained_models/droid.pth",
-    "buffer": 330,
+    "weights": "/mnt/home/code/CUT3R-SLAM/pretrained_models/droid.pth",
+    "buffer": 707,
     "undistort": false,
-    "cropborder": 20,
+    "cropborder": 0,
     "droidvis": false,
     "gsvis": false,
     "start": 0,

@@ -8,8 +8,8 @@ from collections import defaultdict
 out = 'outputs/scannet'
 os.makedirs(f'{out}/meshes', exist_ok=True)
 metrics = defaultdict(float)
-nrs = ['0000', '0054', '0059', '0106', '0169', '0181', '0207', '0233']
-seqs = [s for s in sorted(glob("data/ScanNet/scene*")) if any(n in s for n in nrs)]
+nrs = ['0000', '0059', '0106', '0169', '0181', '0207']
+seqs = [s for s in sorted(glob("/mnt/home/dataset/scannet/scene*")) if any(n in s for n in nrs)]
 
 for i, seq in enumerate(seqs):
     name = os.path.basename(seq)
@@ -17,7 +17,7 @@ for i, seq in enumerate(seqs):
     print(name, out)
 
     # run HI-SLAM2
-    cmd = f"python demo.py --imagedir {seq}/color --calib {seq}/calib.txt --cropborder 12 --config config/scannet_config.yaml "
+    cmd = f"python demo.py --imagedir {seq}/color --calib {seq}/calib.txt --cropborder 20 --config config/scannet_config.yaml "
     cmd += f'--output {out}/{name} > {out}/{name}/log.txt'
     if not os.path.exists(f'{out}/{name}/traj_full.txt'):
         os.system(cmd)

@@ -8,7 +8,7 @@ from shutil import copyfile
 
 
 out = 'outputs/tum'
-dataset_path="/home/kunyi/work/data/tum/"
+dataset_path="/mnt/home/dataset/tum/"
 os.makedirs(f'{out}/meshes', exist_ok=True)
 seqs = [
     "rgbd_dataset_freiburg1_360",
@@ -70,5 +70,5 @@ for seq in seqs:
     # metrics['compr'] += result['recall']
     # print(f"- acc: {result['mean precision']:.3f}, comp: {result['mean recall']:.3f}, comp rat: {result['recall']:.3f}\n")
 
-for r in metrics:
-    print(f'{r}: \t {metrics[r]/len(seqs):.4f}')
+# for r in metrics:
+#     print(f'{r}: \t {metrics[r]/len(seqs):.4f}')

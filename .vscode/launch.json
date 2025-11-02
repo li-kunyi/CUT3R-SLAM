@@ -12,7 +12,7 @@
             "program": "demo_s.py",
             "args": [
                 // "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
-                "--imagedir", "/home/kunyi/work/data/scannet/scene0059_00/color",
+                "--imagedir", "/home/dataset/scannet/scene0059_00/color",
                 // "--imagedir", "data/ScanNet/scene0000_00",
                 "--calib", "calib/scannet.txt",
                 "--config", "config/scannet_config.yaml",
