@@ -214,10 +214,9 @@ class Hi2:
         if fill:
             # estimate pose of every frame
             traj_full = self.traj_filler.run(self.images)  # c2w [trans, quat]
-            traj_full = traj_full.numpy()
 
         if eval_render:
             self.mapper.eval_rendering(self.images, self.args.gtdepthdir, traj_full, self.keyframes.tstamp[:self.keyframes.counter.value].to(device='cpu'),
                                        eval_all=fill)
         
-        return traj_full
+        return traj_full.numpy()

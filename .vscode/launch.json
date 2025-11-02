@@ -11,12 +11,12 @@
             // "program": "demo_test.py",
             "program": "demo_s.py",
             "args": [
-                // "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
-                "--imagedir", "/mnt/home/dataset/7scenes/chess/seq-01/color",
+                "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
+                // "--imagedir", "/mnt/home/dataset/7scenes/chess/seq-01/color",
                 // "--imagedir", "data/ScanNet/scene0000_00",
                 "--calib", "calib/tum.txt",
                 "--config", "config/tum_config.yaml",
-                "--output", "outputs/test/7scenes",
+                "--output", "outputs/test/tum",
                 "--cropborder", "20",
                 // "--undistort"
                 // "--start", "5240",
