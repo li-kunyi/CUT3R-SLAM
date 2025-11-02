@@ -10,8 +10,6 @@ from evaluate_3d_reconstruction import run_evaluation
 from tqdm import tqdm
 sys.path.append('.')
 
-
-
 import torch
 import trimesh
 from scipy.spatial import cKDTree as KDTree

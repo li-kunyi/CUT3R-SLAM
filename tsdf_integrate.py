@@ -27,7 +27,8 @@ def load_intrinsic_extrinsic(result, stamps):
 
 def integrate(depth_file_names, color_file_names, intrinsic, extrinsic, args):
     n_files = len(depth_file_names)
-    device = o3d.core.Device('cuda:0')
+    # device = o3d.core.Device('cuda:0')
+    device = o3d.core.Device("CPU:0")
 
     vbg = o3d.t.geometry.VoxelBlockGrid(
         attr_names=('tsdf', 'weight', 'color'),
@@ -69,8 +70,9 @@ if __name__ == '__main__':
     parser.add_argument('--weight', type=float, default=[1], nargs='+', help='Weight threshold')
     args = parser.parse_args()
 
-    depth_file_names = sorted(glob(f'{args.result}/renders/depth_after_opt/*'))
-    color_file_names = sorted(glob(f'{args.result}/renders/image_after_opt/*'))
+    # import ipdb;ipdb.set_trace()
+    depth_file_names = sorted(glob(f'{args.result}/renders_kf/depth_after_opt/*'))
+    color_file_names = sorted(glob(f'{args.result}/renders_kf/image_after_opt/*'))
     stamps = [float(os.path.basename(i)[:-4]) for i in color_file_names]
     print(f"Found {len(depth_file_names)} depth maps and {len(color_file_names)} color images")
 

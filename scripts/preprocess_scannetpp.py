@@ -1,5 +1,8 @@
 import cv2
 import os
+import json
+import numpy as np
+from scipy.spatial.transform import Rotation as R_scipy
 
 # Base data folder and sequences
 base_dir = '/home/kunyi/work/data/scannetpp'
@@ -44,43 +47,62 @@ for seq in seqs:
     print(f"Saved {saved_count} frames to '{output_folder}'")
     
     # ----------------------
-    # Process COLMAP images.txt
+    # Process pose_intrinsic_imu.json
     # ----------------------
-    colmap_file = os.path.join(base_dir, seq, 'iphone', 'colmap', 'images.txt')
+    pose_file = os.path.join(base_dir, seq, 'iphone', 'pose_intrinsic_imu.json')
     tum_output_file = os.path.join(os.path.dirname(video_path), "traj.txt")
+    intrinsic_output_file = os.path.join(os.path.dirname(video_path), "calib.txt")
     
-    if not os.path.exists(colmap_file):
-        print(f"COLMAP file not found: {colmap_file}")
+    if not os.path.exists(pose_file):
+        print(f"Pose file not found: {pose_file}")
         continue
     
+    with open(pose_file, 'r') as f:
+        pose_data = json.load(f)
+    
     poses = []
-    with open(colmap_file, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if line == '' or line.startswith('#'):
-                continue
-
-            parts = line.split()
-            if len(parts) < 9:
-                continue  # skip invalid lines
-
-            # Extract pose info
-            qw, qx, qy, qz = map(float, parts[1:5])
-            tx, ty, tz = map(float, parts[5:8])
-            name = parts[9]
-
-            # Extract frame index from file name, e.g., "frame_000030.jpg" -> 30
-            frame_num = int(os.path.splitext(name)[0].split('_')[-1])
-
-            # Format timestamp as 4-digit number (or more if needed)
-            timestamp = f"{frame_num:06d}"
-
-            # TUM format: timestamp tx ty tz qx qy qz qw
-            poses.append([timestamp, tx, ty, tz, qx, qy, qz, qw])
-
-    # Save to TUM-format file
+    frame_idx = 0
+    for i, key in enumerate(sorted(pose_data.keys())):
+        if i % 10 != 0:
+            continue  # skip frames, take every 10th
+        
+        pose_entry = pose_data[key]
+        aligned_pose = np.array(pose_entry['aligned_pose'])  # 4x4
+        
+        # Extract rotation R and translation t
+        R = aligned_pose[:3,:3]
+        t = aligned_pose[:3,3]
+        
+        # Convert rotation matrix to quaternion (x, y, z, w)
+        r = R_scipy.from_matrix(R)
+        qx, qy, qz, qw = r.as_quat()  # [x, y, z, w]
+        
+        # TUM format: timestamp tx ty tz qx qy qz qw
+        timestamp = f"{frame_idx:06d}"
+        poses.append([timestamp, t[0], t[1], t[2], qx, qy, qz, qw])
+        
+        frame_idx += 10  # increment by 10 for skipped frames
+    
+    # Save TUM-format poses
     with open(tum_output_file, 'w') as f:
         for p in poses:
             f.write(f"{p[0]} {p[1]} {p[2]} {p[3]} {p[4]} {p[5]} {p[6]} {p[7]}\n")
     
-    print(f"Saved TUM-format poses to '{tum_output_file}'\n")
+    print(f"Saved TUM-format poses to '{tum_output_file}'")
+    
+    # ----------------------
+    # Extract intrinsic
+    # ----------------------
+    # Take intrinsic from the first frame
+    first_key = sorted(pose_data.keys())[0]
+    intrinsic = pose_data[first_key]['intrinsic']
+    fx = intrinsic[0][0]
+    fy = intrinsic[1][1]
+    cx = intrinsic[0][2]
+    cy = intrinsic[1][2]
+    
+    # Save intrinsic to txt
+    with open(intrinsic_output_file, 'w') as f:
+        f.write(f"{fx} {fy} {cx} {cy}\n")
+    
+    print(f"Saved intrinsic parameters to '{intrinsic_output_file}'\n")

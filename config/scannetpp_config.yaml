@@ -1,0 +1,75 @@
+Dataset:
+  pcd_downsample: 4
+  pcd_downsample_init: 4
+  adaptive_pointsize: True
+  point_size: 1.0 #0.05
+  scale_multiplier: 2.0
+  
+Cam:
+  dataset: 'scannet'
+  H: 1920 
+  W: 1440
+  fx: 1438.08
+  fy: 1440.12
+  cx: 958.239
+  cy: 721.1
+  png_depth_scale: 1000. #for depth image in png format
+  crop_edge: 16
+
+Tracking:
+  motion_filter:
+    init_thresh: 4.0
+    thresh: 2.4    # how much motion before considering new keyframe")
+    skip_blur: False
+  frontend:
+    keyframe_thresh: 4.0  # threshold to create a new keyframe")
+    frontend_thresh: 16.0 # add edges between frames whithin this distance")
+    frontend_window: 25   # frontend optimization window")
+    frontend_radius: 2    # force edges between frames within radius")
+    frontend_nms: 1       # non-maximal supression of edges")
+    mono_depth_alpha: 0.01
+    iteration: 1000
+  backend:
+    backend_thresh: 40.0  # add loop closure edges within this distance (larger is more edges)')
+    backend_radius: 2     # connect neighbors within radius (larger is more edges)')
+    backend_nms: 1        # non-maximal supression of edges (smaller is more edges)')
+    covis_thresh: 0.2
+  pgba:
+    active: True
+    pgba_thresh: 22.0     # add loop closure edges within this distance (larger is more edges)')
+
+Mapping:
+  itr_num: 50
+  gaussian_update_every: 50
+  gaussian_update_offset: 25
+
+Training:
+  gaussian_update_every: 200
+
+  lambda_depth: 5.0
+  lambda_normal: 0.05
+  lambda_tv: 0.
+  lambda_iso: 10.0
+
+  gaussian_th: 0.1
+  gaussian_extent: 1.0
+  gaussian_reset: 3001
+  size_threshold: 20
+  window_size: 10
+  rgb_boundary_threshold: 0.01
+  compensate_exposure: True
+
+opt_params:
+  pose_lr: 0.0005
+  scale_lr: 0.001
+  position_lr_init: 0.0005
+  position_lr_final: 0.000005
+  position_lr_max_steps: 20000
+  feature_lr: 0.005
+  opacity_lr: 0.05
+  scaling_lr: 0.001
+  rotation_lr: 0.001
+  exposure_lr: 0.01
+  percent_dense: 0.01
+  lambda_dssim: 0.2
+  densify_grad_threshold: 0.0004

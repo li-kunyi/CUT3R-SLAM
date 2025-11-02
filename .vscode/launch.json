@@ -11,13 +11,14 @@
             // "program": "demo_test.py",
             "program": "demo_s.py",
             "args": [
-                "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
+                "--imagedir", "/home/kunyi/work/data/scannetpp/8b5caf3398/iphone/color",
+                // "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
                 // "--imagedir", "/mnt/home/dataset/7scenes/chess/seq-01/color",
                 // "--imagedir", "data/ScanNet/scene0000_00",
-                "--calib", "calib/tum.txt",
-                "--config", "config/tum_config.yaml",
-                "--output", "outputs/test/tum",
-                "--cropborder", "20",
+                "--calib", "calib/scannetpp_8b.txt",
+                "--config", "config/scannetpp_config.yaml",
+                "--output", "outputs/scannetpp_1102_0/8b5caf3398",
+                // "--cropborder", "10",
                 // "--undistort"
                 // "--start", "5240",
                 // "--length", "450"

@@ -1,24 +1,24 @@
-image.shape: (1, 3, 374, 512)
+image.shape: (1, 3, 384, 512)
 
 Args:
 {
-    "imagedir": "/mnt/home/dataset/tum//rgbd_dataset_freiburg1_desk/rgb",
+    "imagedir": "/home/kunyi/work/data/scannetpp/39f36da05b/iphone/color",
     "posedir": null,
-    "calib": "calib/tum.txt",
-    "config": "config/tum_config.yaml",
-    "output": "outputs/tum/rgbd_dataset_freiburg1_desk",
+    "calib": "/home/kunyi/work/data/scannetpp/39f36da05b/iphone/calib.txt",
+    "config": "config/scannet_config.yaml",
+    "output": "outputs/scannetpp/39f36da05b",
     "gtdepthdir": null,
-    "weights": "/mnt/home/code/CUT3R-SLAM/pretrained_models/droid.pth",
-    "buffer": 211,
-    "undistort": true,
-    "cropborder": 20,
+    "weights": "/home/kunyi/work/code/CUT3R-SLAM/pretrained_models/droid.pth",
+    "buffer": 248,
+    "undistort": false,
+    "cropborder": 0,
     "droidvis": false,
     "gsvis": false,
     "start": 0,
     "length": 100000,
     "ckpt_path": "./checkpoints/spann3r.pth",
     "image_size": [
-        368,
+        384,
         512
     ]
 }
@@ -33,15 +33,15 @@ Cfg:
         "scale_multiplier": 2.0
     },
     "Cam": {
-        "dataset": "tum",
+        "dataset": "scannet",
         "H": 480,
         "W": 640,
-        "fx": 517.3,
-        "fy": 516.5,
-        "cx": 318.6,
-        "cy": 255.3,
+        "fx": 577.590698,
+        "fy": 578.729797,
+        "cx": 318.905426,
+        "cy": 242.683609,
         "png_depth_scale": 1000.0,
-        "crop_edge": 20
+        "crop_edge": 16
     },
     "Tracking": {
         "motion_filter": {
