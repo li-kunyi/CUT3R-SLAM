@@ -10,8 +10,8 @@ base_dir = '/home/kunyi/work/data/scannetpp'
 out = 'outputs/scannetpp'
 os.makedirs(f'{out}/meshes', exist_ok=True)
 metrics = defaultdict(float)
-# nrs = ['f34d532901', '39f36da05b', '8b5caf3398', 'b20a261fdf']
-nrs = ['39f36da05b']
+nrs = ['f34d532901', '39f36da05b', '8b5caf3398', 'b20a261fdf']
+# nrs = ['39f36da05b']
 
 seqs = [s for s in sorted(glob(f"{base_dir}/*")) if any(n in s for n in nrs)]
 
@@ -21,14 +21,14 @@ for i, seq in enumerate(seqs):
     print(name, out)
 
     # run HI-SLAM2
-    cmd = f"python demo_s.py --imagedir {seq}/iphone/color --calib {seq}/iphone/calib.txt --config config/scannet_config.yaml "
+    cmd = f"python demo_s.py --imagedir {seq}/iphone/color --calib {seq}/iphone/calib.txt --config config/scannetpp_config.yaml "
     cmd += f'--output {out}/{name} > {out}/{name}/log.txt'
     if not os.path.exists(f'{out}/{name}/traj_full.txt'):
         os.system(cmd)
 
     # eval ate
     if not os.path.exists(f'{out}/{name}/ape.txt') or len(open(f'{out}/{name}/ape.txt').readlines()) < 10:
-        os.system(f'evo_ape tum {seq}/traj.txt {out}/{name}/traj_kf.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
+        os.system(f'evo_ape tum {seq}/iphone/traj.txt {out}/{name}/traj_kf.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
         os.system(f'unzip -q {out}/{name}/evo.zip -d {out}/{name}/evo')
     ATE = float([i for i in open(f'{out}/{name}/ape.txt').readlines() if 'rmse' in i][0][-10:-1]) * 100
     metrics['ATE full'] += ATE

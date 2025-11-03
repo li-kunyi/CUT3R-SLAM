@@ -12,7 +12,7 @@
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 conda install -y -c "nvidia/label/cuda-12.1.0" cuda-toolkit
 
-pip install -r requirement.txt
+pip install -r requirement.txt # -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # RaDe-GS rasterizer
 pip install thirdparty/diff-gaussian-rasterization
