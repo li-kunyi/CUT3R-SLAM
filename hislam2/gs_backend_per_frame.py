@@ -432,8 +432,9 @@ class GSBackEnd(mp.Process):
                 update_pose(viewpoints[-1])
 
         with torch.no_grad(): 
-            os.makedirs(f"{self.output_dir}/pre_optimization", exist_ok = True)
-            self.viz(viewpoints[-1], f"{self.output_dir}/pre_optimization", BA_window[-1])
+            if self.verbose:
+                os.makedirs(f"{self.output_dir}/pre_optimization", exist_ok = True)
+                self.viz(viewpoints[-1], f"{self.output_dir}/pre_optimization", BA_window[-1])
             
 
     def optimization(self, iters, optimize_pose=True, current_window=None):

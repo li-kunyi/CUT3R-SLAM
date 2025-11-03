@@ -46,7 +46,7 @@ Mapping:
 Training:
   gaussian_update_every: 200
 
-  lambda_depth: 5.0
+  lambda_depth: 10.
   lambda_normal: 0.05
   lambda_tv: 0.
   lambda_iso: 10.0
