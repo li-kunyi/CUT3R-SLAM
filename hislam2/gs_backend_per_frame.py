@@ -11,7 +11,7 @@ import torchvision
 import torch.nn.functional as F
 import open3d as o3d
 from gaussian.renderer import render
-from gaussian.utils.loss_utils import l1_loss, ssim
+from gaussian.utils.loss_utils import l1_loss, ssim, masked_ssim
 from gaussian.scene.gaussian_model import GaussianModel
 from gaussian.utils.graphics_utils import getProjectionMatrix2
 from gaussian.utils.slam_utils import update_pose, get_pose, depth_to_normal, apply_depth_colormap, project2world
@@ -78,6 +78,7 @@ class GSBackEnd(mp.Process):
 
     def reset(self):
         self.iteration_count = 0
+        self.submap_count = 0
         self.current_window = []
         self.initialized = False
         # remove all gaussians
@@ -116,7 +117,7 @@ class GSBackEnd(mp.Process):
                                         conf=conf, 
                                         submap_idx=kf_sub_idx, init=False)                    
         
-        self.optimization(20, current_window=current_idx, optimize_pose=False)
+        # self.optimization(20, current_window=current_idx, optimize_pose=False)
         
 
     def pose_estimator(self, pose, gt_img, tstamp, gt_depth=None, confs=None):  
@@ -198,7 +199,7 @@ class GSBackEnd(mp.Process):
 
         return alpha_binary
     
-    def pose_refine(self, BA_window, fx, fy, cx, cy, iters=50, lr_ratio=10, return_args=True, alpha_th=0.9):  
+    def pose_refine(self, BA_window, fx, fy, cx, cy, iters=50, lr_ratio=10, return_args=True, alpha_th=0.3):  
         '''
             optimize pose jointly with gaussian model and reprojection
         '''      
@@ -215,6 +216,13 @@ class GSBackEnd(mp.Process):
                     "params": [view.cam_trans_delta],
                     "lr": self.config["opt_params"]["pose_lr"]*10,
                     "name": "trans_{}".format(view.uid)})
+
+            with torch.no_grad(): 
+                if self.verbose:
+                    kf_idx = BA_window[idx]  
+                    os.makedirs(f"{self.output_dir}/pre_BA_before", exist_ok = True)
+                    self.viz(view, f"{self.output_dir}/pre_BA_before", kf_idx)
+
                 
         pose_optimizers = torch.optim.Adam(opt_params)
 
@@ -222,17 +230,12 @@ class GSBackEnd(mp.Process):
         pose_optimizers.zero_grad(set_to_none=True)
 
         # pbar = tqdm(range(iters), desc="pose refinement")
-        for iteration in range(iters):
-            w2c_all = []
-            gt_image_all = []
-            alpha_all = []
-            
+        for iteration in range(iters):            
             rgb_loss_all = 0
             depth_loss_all = 0
+            pose_loss_all = 0
             for viewpoint in viewpoints:
                 # gaussian alignment: fix the gaussians and render for new viewpoint, mask out area without gaussians
-                current_w2c = get_pose(viewpoint)
-
                 render_pkg = render(viewpoint, self.gaussians, self.background)
 
                 image, depth, alpha = (render_pkg["render"], render_pkg["depth"], render_pkg["mask"])
@@ -242,30 +245,26 @@ class GSBackEnd(mp.Process):
 
                 alpha_mask = (alpha > alpha_th).detach()
                 existing_ratio = alpha_mask.sum() / (alpha_mask.shape[1] * alpha_mask.shape[2])
-                if existing_ratio > 0.1:
-                    depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
-                    depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
+                
+                depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
+                depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
 
-                    rgb_loss = torch.abs((gt_image - image)[:, alpha_mask[0]]).mean()
-                    # img_smooth = gaussian_blur(image)
-                    # gt_smooth = gaussian_blur(gt_image)
-                    # edge_loss = torch.abs((sobel_edges(img_smooth) - sobel_edges(gt_smooth))).mean()
+                rgb_loss = torch.abs((gt_image - image)[:, alpha_mask[0]]).mean()
+                # img_smooth = gaussian_blur(image)
+                # gt_smooth = gaussian_blur(gt_image)
+                # edge_loss = torch.abs((sobel_edges(img_smooth) - sobel_edges(gt_smooth))).mean()
 
-                    depth_loss = torch.abs(1./depth[depth_pixel_mask] - 1./gt_depth[depth_pixel_mask]).mean()
-                    # diff = torch.log(depth[depth_pixel_mask]) - torch.log(gt_depth[depth_pixel_mask])
-                    # depth_loss = (diff**2).mean() - diff.mean()**2
-                    
-                    rgb_loss_all += rgb_loss #0.8 * rgb_loss + 0.2 * edge_loss
-                    depth_loss_all +=  depth_loss
+                # depth_loss = torch.abs(1./depth[depth_pixel_mask] - 1./gt_depth[depth_pixel_mask]).mean()
+                diff = torch.log(depth[depth_pixel_mask]) - torch.log(gt_depth[depth_pixel_mask])
+                depth_loss = (diff**2).mean() - diff.mean()**2
 
-                w2c_all.append(current_w2c)
-                gt_image_all.append(gt_image.permute(1, 2, 0))
-                alpha_all.append(alpha_mask)
-            
-            alpha_all = torch.cat(alpha_all)
-            alpha_binary = (alpha_all <= alpha_th).float()
+                pose_loss = ((viewpoint.cam_rot_delta) ** 2).sum() + ((viewpoint.cam_trans_delta) ** 2).sum()
+                
+                rgb_loss_all += existing_ratio * rgb_loss #0.8 * rgb_loss + 0.2 * edge_loss
+                depth_loss_all +=  existing_ratio * depth_loss
+                pose_loss_all += (1 - existing_ratio) * pose_loss
 
-            loss = (rgb_loss_all + depth_loss_all) / B
+            loss = (rgb_loss_all + 5 * depth_loss_all + 0.05 * pose_loss_all) / B
 
             loss.backward()
             
@@ -276,35 +275,38 @@ class GSBackEnd(mp.Process):
                 pose_optimizers.step()
                 pose_optimizers.zero_grad(set_to_none=True)
                 self.gaussians.optimizer.zero_grad(set_to_none=True)
-                
-                for viewpoint in viewpoints:
-                    update_pose(viewpoint)
+
+        for viewpoint in viewpoints:
+            update_pose(viewpoint)
 
         w2c_all = []
         gt_depth_all = []
+        alpha_all = []
         if return_args:
             with torch.no_grad(): 
                 for i, viewpoint in enumerate(viewpoints):
                     current_w2c = get_pose(viewpoint)
-                    gt_depth = viewpoint.depth.to(dtype=torch.float32, device=image.device)[None]
+                    gt_depth = viewpoint.depth.to(dtype=torch.float32, device=current_w2c.device)[None]
 
                     render_pkg = render(viewpoint, self.gaussians, self.background)
                     image, depth, alpha = (render_pkg["render"], render_pkg["depth"], render_pkg["mask"])
 
-                    alpha_mask = (alpha > alpha_th)
-                    depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
-                    depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
-                    depth_valid = depth[depth_pixel_mask]
-                    gt_valid = gt_depth[depth_pixel_mask]
+                    # alpha_mask = (alpha > alpha_th)
+                    # existing_ratio = alpha_mask.sum() / (alpha_mask.shape[1] * alpha_mask.shape[2])
+                    # depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
+                    # depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
+                    # depth_valid = depth[depth_pixel_mask]
+                    # gt_valid = gt_depth[depth_pixel_mask]
 
-                    if depth_valid.numel() > 10:
-                        log_scale = (torch.log(depth_valid) - torch.log(gt_valid)).mean()
-                        scale = torch.exp(log_scale)
-                        scale = torch.clamp(scale, 0.95, 1.05)
-                        gt_depth = scale * gt_depth
+                    # if existing_ratio > 0.3:
+                    #     log_scale = (torch.log(depth_valid) - torch.log(gt_valid)).mean()
+                    #     scale = torch.exp(log_scale)
+                    #     scale = torch.clamp(scale, 0.95, 1.05)
+                    #     gt_depth = scale * gt_depth
 
                     w2c_all.append(current_w2c)
                     gt_depth_all.append(gt_depth)
+                    alpha_all.append(alpha)
 
                     if self.verbose:
                         kf_idx = BA_window[i]  
@@ -313,9 +315,70 @@ class GSBackEnd(mp.Process):
 
                 T_w2c = torch.stack(w2c_all, dim=0)
                 gt_depths = torch.cat(gt_depth_all, dim=0)
+                alpha_all = torch.cat(alpha_all)
+                alpha_binary = (alpha_all <= alpha_th).float()
 
                 # return pointmaps corresponding to updated pose
                 pointmaps = project2world(torch.inverse(T_w2c), gt_depths, fx, fy, cx, cy)
+
+            return pointmaps[:, ::self.downsample_ratio, ::self.downsample_ratio], alpha_binary[:, ::self.downsample_ratio, ::self.downsample_ratio]
+
+    def pose_refine_v2(self, BA_window, fx, fy, cx, cy, w2cs, alpha_th=0.5):  
+        '''
+            optimize pose jointly with gaussian model and reprojection
+        '''      
+        viewpoints = [self.viewpoints[kf_idx] for kf_idx in BA_window]
+
+        w2c_all = []
+        gt_depth_all = []
+        alpha_all = []
+        first_w2c = get_pose(viewpoints[0]).clone().detach()
+        prev_w2c = w2cs[0]
+        with torch.no_grad(): 
+            for i, viewpoint in enumerate(viewpoints):
+
+                current_w2c = w2cs[i]
+                current_w2c = current_w2c @ torch.inverse(prev_w2c) @ first_w2c
+
+                viewpoint.R = current_w2c[:3, :3]
+                viewpoint.T = current_w2c[:3, 3]
+                viewpoint.R_gt = current_w2c[:3, :3]
+                viewpoint.T_gt = current_w2c[:3, 3]
+
+                gt_depth = viewpoint.depth.to(dtype=torch.float32, device=current_w2c.device)[None]
+
+                render_pkg = render(viewpoint, self.gaussians, self.background)
+                image, depth, alpha = (render_pkg["render"], render_pkg["depth"], render_pkg["mask"])
+
+                if i==0:
+                    alpha_mask = (alpha > alpha_th)
+                    depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
+                    depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
+                    depth_valid = depth[depth_pixel_mask]
+                    gt_valid = gt_depth[depth_pixel_mask]
+
+                    log_scale = (torch.log(depth_valid) - torch.log(gt_valid)).mean()
+                    scale = torch.exp(log_scale)
+                    scale = torch.clamp(scale, 0.95, 1.05)
+
+                gt_depth = scale * gt_depth
+
+                w2c_all.append(current_w2c)
+                gt_depth_all.append(gt_depth)
+                alpha_all.append(alpha)
+
+                if self.verbose:
+                    kf_idx = BA_window[i]  
+                    os.makedirs(f"{self.output_dir}/pre_BA", exist_ok = True)
+                    self.viz(viewpoint, f"{self.output_dir}/pre_BA", kf_idx)
+
+            T_w2c = torch.stack(w2c_all, dim=0)
+            gt_depths = torch.cat(gt_depth_all, dim=0)
+            alpha_all = torch.cat(alpha_all)
+            alpha_binary = (alpha_all <= alpha_th).float()
+
+            # return pointmaps corresponding to updated pose
+            pointmaps = project2world(torch.inverse(T_w2c), gt_depths, fx, fy, cx, cy)
 
             return pointmaps[:, ::self.downsample_ratio, ::self.downsample_ratio], alpha_binary[:, ::self.downsample_ratio, ::self.downsample_ratio]
 
@@ -323,6 +386,11 @@ class GSBackEnd(mp.Process):
     def pre_optimization(self, BA_window, iters=20, alpha_th=0.9, densify=True):  
         viewpoints = [self.viewpoints[kf_idx] for kf_idx in BA_window]
         B = len(viewpoints)
+
+        with torch.no_grad(): 
+            if self.verbose:
+                os.makedirs(f"{self.output_dir}/pre_optimization_before", exist_ok = True)
+                self.viz(viewpoints[-1], f"{self.output_dir}/pre_optimization_before", BA_window[-1])
 
         opt_params = []
         view = viewpoints[-1]
@@ -388,7 +456,7 @@ class GSBackEnd(mp.Process):
                 isotropic_loss = torch.abs(scaling - scaling.mean(dim=1).view(-1, 1)).mean()
 
                 rgb_loss_all += rgb_loss
-                depth_loss_all +=  depth_loss
+                depth_loss_all += depth_loss
                 normal_loss_all += normal_loss
                 isotropic_loss_all += isotropic_loss
                 viewspace_point_tensor_acm.append(viewspace_point_tensor)
@@ -423,10 +491,10 @@ class GSBackEnd(mp.Process):
                             self.gaussian_extent,
                             self.size_threshold
                         )
-             
-                self.gaussians.optimizer.step()
-                self.gaussians.optimizer.zero_grad(set_to_none=True)
+
+                self.gaussians.optimizer.step()    
                 pose_optimizers.step()
+                self.gaussians.optimizer.zero_grad(set_to_none=True)
                 pose_optimizers.zero_grad(set_to_none=True)
                 
                 update_pose(viewpoints[-1])
@@ -437,7 +505,7 @@ class GSBackEnd(mp.Process):
                 self.viz(viewpoints[-1], f"{self.output_dir}/pre_optimization", BA_window[-1])
             
 
-    def optimization(self, iters, optimize_pose=True, current_window=None):
+    def optimization(self, iters, optimize_pose=True, current_window=None, densify=False):
         viewpoint_stack = [self.viewpoints[kf_idx] for kf_idx in current_window]
         B = len(viewpoint_stack)
 
@@ -452,7 +520,17 @@ class GSBackEnd(mp.Process):
                         "params": [view.cam_trans_delta],
                         "lr": self.config["opt_params"]["pose_lr"]*10,
                         "name": "trans_{}".format(view.uid)})
-                    
+                  
+                if self.config["Training"]["compensate_exposure"]:
+                    opt_params.append({
+                            "params": [view.exposure_a],
+                            "lr": self.config["opt_params"]["exposure_lr"],
+                            "name": "exposure_a_{}".format(view.uid)})
+                    opt_params.append({
+                            "params": [view.exposure_b],
+                            "lr": self.config["opt_params"]["exposure_lr"],
+                            "name": "exposure_b_{}".format(view.uid)})
+                        
             pose_optimizers = torch.optim.Adam(opt_params)
 
             pose_optimizers.zero_grad(set_to_none=True)
@@ -466,8 +544,6 @@ class GSBackEnd(mp.Process):
 
         pbar = tqdm(range(iters), desc="Gaussian Mapping")
         for iteration in range(iters):
-            self.iteration_count += 1
-
             rgb_loss_all = 0
             depth_loss_all = 0
             normal_loss_all = 0
@@ -479,9 +555,9 @@ class GSBackEnd(mp.Process):
             w2c_all = []
             gt_image_all = []
 
-            viewpoints = viewpoint_stack + [random_viewpoint_stack[idx] for idx in torch.randperm(len(random_viewpoint_stack))[:2]]
+            viewpoints = viewpoint_stack #+ [random_viewpoint_stack[idx] for idx in torch.randperm(len(random_viewpoint_stack))[:2]]
             N = len(viewpoints)
-            for viewpoint in viewpoints:
+            for viewpoint in viewpoints:                
                 rel_w2c = get_pose(viewpoint)
                     
                 render_pkg = render(viewpoint, self.gaussians, self.background)
@@ -493,6 +569,8 @@ class GSBackEnd(mp.Process):
                     render_pkg["radii"],
                     render_pkg["depth"],
                     render_pkg["n_touched"])
+
+                image = (image.permute(1, 2, 0) @ viewpoint.exposure_a + viewpoint.exposure_b).permute(2, 0, 1)
 
                 gt_image = viewpoint.original_image.cuda()
                 gt_depth = viewpoint.depth.to(dtype=torch.float32, device=image.device)[None]
@@ -534,18 +612,35 @@ class GSBackEnd(mp.Process):
 
             loss.backward()
 
-            pbar.set_postfix(loss=f"{loss.item():.4f}")
-            pbar.update()
+            with torch.no_grad():
+                if densify:
+                    for idx in range(len(viewspace_point_tensor_acm)):
+                        self.gaussians.max_radii2D[visibility_filter_acm[idx]] = torch.max(
+                            self.gaussians.max_radii2D[visibility_filter_acm[idx]],
+                            radii_acm[idx][visibility_filter_acm[idx]],
+                        )
+                        self.gaussians.add_densification_stats(
+                            viewspace_point_tensor_acm[idx], visibility_filter_acm[idx]
+                        )
 
-            self.gaussians.optimizer.step()
-            
-            if optimize_pose:
-                pose_optimizers.step()
-                with torch.no_grad():
+                    if (iteration == iters // 4) or (iteration == iters // 2):
+                        self.gaussians.densify_and_prune(
+                            self.opt_params.densify_grad_threshold,
+                            self.gaussian_th,
+                            self.gaussian_extent,
+                            self.size_threshold
+                        )
+
+                self.gaussians.optimizer.step()
+                if optimize_pose:
+                    pose_optimizers.step()
                     for viewpoint in viewpoint_stack:
                         update_pose(viewpoint)   
-                pose_optimizers.zero_grad(set_to_none=True)
-            self.gaussians.optimizer.zero_grad(set_to_none=True)
+                    pose_optimizers.zero_grad(set_to_none=True)
+                self.gaussians.optimizer.zero_grad(set_to_none=True)
+
+            pbar.set_postfix(loss=f"{loss.item():.4f}")
+            pbar.update()
 
         if self.verbose:
             with torch.no_grad():
@@ -560,7 +655,7 @@ class GSBackEnd(mp.Process):
             
         image, depth = (render_pkg["render"], render_pkg["depth"])  
         
-        mask = (render_pkg["mask"] > 0.9).float()
+        mask = (render_pkg["mask"] > 0.5).float()
         mask_map = apply_depth_colormap(mask.permute(1, 2, 0), None, near_plane=None, far_plane=None)
         mask_map = mask_map.permute(2, 0, 1)
 
@@ -729,40 +824,51 @@ class GSBackEnd(mp.Process):
             self.gaussians.n_obs = torch.cat((self.gaussians.n_obs, new_n_obs)).int()
   
         for idx in update_idx:
-            self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=50, return_args=False, alpha_th=0.5)
+            self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=50, return_args=False, alpha_th=0.0)
+
+        # self.global_BA(iteration_total=20*len(self.viewpoints), densify=False)
 
         return self.data_update(self.h, self.w, update_idx)
 
-    def run(self, packet, iterations=100):     
-        H, W = packet["images"].shape[-2:]   
-        if not hasattr(self, "projection_matrix"):
-            self.K = K = list(packet["intrinsics"]) + [W, H]
-            self.fx=K[0]
-            self.fy=K[1]
-            self.cx=K[2]
-            self.cy=K[3]
-            self.projection_matrix = getProjectionMatrix2(znear=0.01, zfar=100.0, fx=K[0], fy=K[1], cx=K[2], cy=K[3], W=W, H=H).transpose(0, 1).cuda()
+    def run(self, packet, iterations=100):   
+        with torch.no_grad():  
+            H, W = packet["images"].shape[-2:]   
+            if not hasattr(self, "projection_matrix"):
+                self.K = K = list(packet["intrinsics"]) + [W, H]
+                self.fx=K[0]
+                self.fy=K[1]
+                self.cx=K[2]
+                self.cy=K[3]
+                self.projection_matrix = getProjectionMatrix2(znear=0.01, zfar=100.0, fx=K[0], fy=K[1], cx=K[2], cy=K[3], W=W, H=H).transpose(0, 1).cuda()
 
-        viz_idx = packet['viz_idx']
-        submap_idx = packet['submap_idx']
-        imgs = packet['images'].cuda() / 255.0
-        
-        pointmaps = packet['pointmaps']
-        depths = packet["depths"]
-        confs = packet['confs'].numpy()
-        c2w = pose_vec_to_matrix(packet["poses"]).cuda()
-        w2c = torch.inverse(c2w)
-        
-        _, self.h, self.w, _ = pointmaps.shape
-        imgs_ds = imgs[..., ::self.downsample_ratio, ::self.downsample_ratio]
-        pointmaps = F.interpolate(pointmaps.permute(0, 3, 1, 2), size=(H//self.downsample_ratio, W//self.downsample_ratio), mode='bilinear', align_corners=False).permute(0, 2, 3, 1).numpy()
-        depths = F.interpolate(depths[None], size=(H, W), mode='bilinear', align_corners=False)[0]
-        _, h1, w1, _ = pointmaps.shape
+            viz_idx = packet['viz_idx']
+            submap_idx = packet['submap_idx']
+            imgs = packet['images'].cuda() / 255.0
+            
+            pointmaps = packet['pointmaps']
+            depths = packet["depths"]
+            confs = packet['confs'].numpy()
+            c2w = pose_vec_to_matrix(packet["poses"]).cuda()
+            w2c = torch.inverse(c2w)
+            
+            _, self.h, self.w, _ = pointmaps.shape
+            imgs_ds = imgs[..., ::self.downsample_ratio, ::self.downsample_ratio]
+            pointmaps = F.interpolate(pointmaps.permute(0, 3, 1, 2), size=(H//self.downsample_ratio, W//self.downsample_ratio), mode='bilinear', align_corners=False).permute(0, 2, 3, 1).numpy()
+            depths = F.interpolate(depths[None], size=(H, W), mode='bilinear', align_corners=False)[0]
+            _, h1, w1, _ = pointmaps.shape
+
 
         for i, idx in enumerate(viz_idx):
+            current_w2c = w2c[i]
+            if i > 0:               
+                prev_w2c = w2c[i-1]
+                rel = current_w2c @ torch.inverse(prev_w2c)
+                new_prev_w2c = get_pose(self.viewpoints[viz_idx[i-1]]).clone().detach()
+                current_w2c = rel @ new_prev_w2c
+
             if idx not in self.viewpoints.keys():
                 tstamp = packet['tstamp'][i].item()
-                viewpoint = Camera.init_from_tracking(imgs[i], depths[i], None, w2c[i], idx, self.projection_matrix, self.K, tstamp, None)
+                viewpoint = Camera.init_from_tracking(imgs[i], depths[i], None, current_w2c, idx, self.projection_matrix, self.K, tstamp, None)
                 self.viewpoints[idx] = viewpoint
         
                 # add new gaussian per frame, mapping and joint optimization gaussians and poses
@@ -777,7 +883,7 @@ class GSBackEnd(mp.Process):
                                                     conf=None, 
                                                     submap_idx=0, init=True)
                     self.current_window = list([0])
-                    self.optimization(100, current_window=self.current_window, optimize_pose=False)
+                    self.optimization(100, current_window=self.current_window)
                     self.initialized = True
                 else:  # add new kf into gaussian model 
                     current_idx = [idx]
@@ -786,12 +892,10 @@ class GSBackEnd(mp.Process):
                         self.current_window = self.current_window + list(current_idx)
                     else:
                         self.current_window = self.current_window[1:] + list(current_idx)
-                    self.pre_optimization(self.current_window[-2:], iters=100, densify=False)
-                    
-                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=1)
-                    # pointmap = F.interpolate(pointmap.permute(0, 3, 1, 2), size=(h1, w1), mode='bilinear', align_corners=False).permute(0, 2, 3, 1)
+                        
+                    # self.pre_optimization(self.current_window[-2:], iters=iterations, densify=False)
+                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=100)
                     pointmap = pointmap.detach().cpu().numpy()
-                    # conf = F.interpolate(conf[None], size=(h1, w1), mode='bilinear', align_corners=False)[0]
                     conf = conf.detach().cpu().numpy()
                     rgb = imgs_ds[i][None]
                 
@@ -802,13 +906,13 @@ class GSBackEnd(mp.Process):
                                                     submap_idx=submap_idx, init=False)                    
                     
                     self.optimization(20, current_window=self.current_window)
+                    self.optimization(50, current_window=[self.current_window[-1]], optimize_pose=False, densify=False)
         
-        for idx in self.current_window:
-            self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=10, return_args=False, alpha_th=0.5)
-        
-        self.gaussians.densify_and_prune(min_opacity=self.gaussian_th, densify=False) 
-        
+        # self.gaussians.densify_and_prune(min_opacity=0.05, densify=False)
+        self.global_BA(iteration_total=5*len(self.viewpoints), densify=True, opacity_reset=False)
+
         return self.data_update(self.h, self.w, self.current_window)
+
 
     def gaussian_reinit(self, rgbs, pointmaps, iteration_total=3000):
         self.reset()
@@ -891,7 +995,7 @@ class GSBackEnd(mp.Process):
             pbar.set_postfix(loss=f"{loss.item():.4f}")
             pbar.update()
     
-    def global_BA(self, iteration_total, densify=True):
+    def global_BA(self, iteration_total, densify=True, opacity_reset=True):
         '''jointly optimize both gaussians and camera poses: Global BA'''
         opt_params = []
         for idx, view in enumerate(self.viewpoints.values()):
@@ -921,6 +1025,7 @@ class GSBackEnd(mp.Process):
 
         pbar = tqdm(range(iteration_total), desc="Global BA")
         for iteration in range(iteration_total):
+            self.iteration_count += 1
             viewpoint_idx_stack = list(self.viewpoints.keys())
             viewpoint_idx = viewpoint_idx_stack.pop(random.randint(0, len(viewpoint_idx_stack) - 1))
             viewpoint = self.viewpoints[viewpoint_idx]
@@ -960,12 +1065,12 @@ class GSBackEnd(mp.Process):
 
             loss.backward()
 
-            with torch.no_grad():  
-                if iteration < (iteration_total // 2) and iteration > 500 and densify:
+            with torch.no_grad():
+                if iteration < 10000 and densify:
                     self.gaussians.max_radii2D[visibility_filter] = torch.max(self.gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
                     self.gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                    if (iteration + 1) % self.gaussian_update_every  == 0:
+                    if (self.iteration_count + 1) % self.gaussian_update_every  == 0:
                         self.gaussians.densify_and_prune(
                                 self.opt_params.densify_grad_threshold,
                                 self.gaussian_th,
@@ -973,7 +1078,7 @@ class GSBackEnd(mp.Process):
                                 self.size_threshold
                             )
 
-                    if (iteration + 1) % self.gaussian_reset == 0:
+                    if ((self.iteration_count + 1) % self.gaussian_reset == 0) and opacity_reset:
                         self.gaussians.reset_opacity()
 
                 self.gaussians.optimizer.step()
@@ -995,16 +1100,19 @@ class GSBackEnd(mp.Process):
 
         Log("Map refinement done")
 
+    def global_pose_refine(self, iters=5):
+        for i in range(iters):
+            # self.gaussians.reset_opacity()
+            self.global_BA(iteration_total=5*len(self.viewpoints), densify=True, opacity_reset=False)
+            # for idx in range(len(self.viewpoints)):
+            #     self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=20, return_args=False, alpha_th=0.0)
 
-    def finalize(self):
-        for idx, view in enumerate(self.viewpoints.items()):
-            self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=50, lr_ratio=2, return_args=False, alpha_th=0.0)
-            
+    def finalize(self):  
+        for idx in range(len(self.viewpoints)):
+            self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=30, return_args=False, alpha_th=0.0)
+
+        self.iteration_count = 0       
         self.global_BA(iteration_total=self.gaussians.max_steps)
-
-        for idx, view in enumerate(self.viewpoints.items()):
-            self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=50, lr_ratio=2, return_args=False, alpha_th=0.0)
-        # self.global_BA(iteration_total=5000, densify=False)
 
         self.pcd_viz(self.gaussians.max_steps)
         os.makedirs(f"{self.output_dir}/ckpt", exist_ok=True)

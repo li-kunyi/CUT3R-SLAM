@@ -11,16 +11,16 @@
             // "program": "demo_test.py",
             "program": "demo_s.py",
             "args": [
-                "--imagedir", "/home/kunyi/work/data/scannetpp/8b5caf3398/iphone/color",
+                "--imagedir", "/root/autodl-fs/scannetpp/8b5caf3398/iphone/color",
                 // "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
                 // "--imagedir", "/mnt/home/dataset/7scenes/chess/seq-01/color",
                 // "--imagedir", "data/ScanNet/scene0000_00",
-                "--calib", "calib/scannetpp_8b.txt",
+                "--calib", "calib/scannetpp.txt",
                 "--config", "config/scannetpp_config.yaml",
-                "--output", "outputs/scannetpp_1102_0/8b5caf3398",
+                "--output", "outputs/test/8b5caf3398",
                 // "--cropborder", "10",
                 // "--undistort"
-                // "--start", "5240",
+                "--start", "13",
                 // "--length", "450"
             ]
         }

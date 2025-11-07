@@ -165,7 +165,7 @@ class FactorGraph:
 
         if selected_c2w.numel() > 0:
             overlap_ratios = self.cal_overlap_batch(current_pointmap, selected_c2w, K)  # reprojection overlap ratios
-            mask = overlap_ratios > 0.5  # close views, should have large overlap          
+            mask = overlap_ratios > 0.3  # close views, should have large overlap          
 
             jj = selected_idx[mask]  # [M]
             if jj.numel() > 0:
@@ -174,8 +174,9 @@ class FactorGraph:
                 self.add_factors(jj, ii)
 
         # Condition 2: similar viewing direction (0.8 < cos_sim, 60 degree fov), but large distance difference
-        cond2 = (cos_sim >= 0.7) & (dists > 1.0) #& (dists < 5.0)
-        cond2 = cond2 #& (~cond1)
+        # cond2 = (cos_sim >= 0.7) & (dists > 1.0) #& (dists < 5.0)
+        # cond2 = cond2 #& (~cond1)
+        cond2 = ~cond1
 
         selected_c2w = all_poses[cond2]
         selected_pointmaps = all_pointmaps[cond2]
@@ -184,7 +185,8 @@ class FactorGraph:
             overlap_ratios = self.cal_overlap_batch(current_pointmap, selected_c2w, K)  # reprojection overlap ratios
             # bi-directional overlap check
             overlap_ratios_a2c = self.cal_overlap_bi(selected_pointmaps, current_pose.unsqueeze(0), K).squeeze()  # [B, 1]
-            mask = (overlap_ratios + overlap_ratios_a2c) / 2 > 0.3
+            # mask = (overlap_ratios + overlap_ratios_a2c) / 2 > 0.3
+            mask = (overlap_ratios > 0.3) | (overlap_ratios_a2c > 0.3)
 
             jj = selected_idx[mask]  # [M]
             if jj.numel() > 0:
@@ -499,7 +501,7 @@ class FactorGraph:
             return representative_frames
         
     def detect_loop(self, current_idx, current_featI, all_featI,
-                temporal_window=20, feat_th=0.7, small_loop_candidates=False):
+                temporal_window=8, feat_th=0.7, small_loop_candidates=False):
         """
         Detect loop closure for the current keyframe.
 

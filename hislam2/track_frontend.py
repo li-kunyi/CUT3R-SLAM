@@ -195,7 +195,8 @@ class TrackFrontend:
             pose = poses[i - t0]
 
             if init:
-                pointmap = pts3ds_other[i - t0]
+                pose = first_w2c @ pose
+                pointmap = geotrf(pose.unsqueeze(0), pts.unsqueeze(0))[0]
             else:
                 if i == t0:
                     # align with previous submap
@@ -266,7 +267,7 @@ class TrackFrontend:
 
                 # viz_depth(W, H, target_pts, w2c, output_dir)
                 output_dir = f"{depth_dir}/depth_{i}_frame_{int(self.keyframes.tstamp[i].cpu().numpy())}.png"
-                viz_map(depths[0].detach().cpu().numpy(), output_dir, colorize=True)
+                viz_map(depth.detach().cpu().numpy(), output_dir, colorize=True)
                 output_dir = f"{depth_dir}/pointmap_{i}_frame_{int(self.keyframes.tstamp[i].cpu().numpy())}.png"
                 viz_map(((pointmap - pointmap.min()) / (pointmap.max() - pointmap.min() + 1e-8)).detach().cpu().numpy(), output_dir, colorize=False)
                 output_dir = f"{depth_dir}/rgb_{i}_frame_{int(self.keyframes.tstamp[i].cpu().numpy())}.png"

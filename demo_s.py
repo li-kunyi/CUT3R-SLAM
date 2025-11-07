@@ -141,7 +141,7 @@ if __name__ == '__main__':
     cfg = load_config(args.config)    
 
     N = len(os.listdir(args.imagedir))
-    args.buffer = min(1000, N // 10 + 150) if args.buffer < 0 else args.buffer
+    args.buffer = min(1000, N // 5 + 150) if args.buffer < 0 else args.buffer
     pbar = tqdm(range(N), desc="Processing keyframes", initial=args.start)
 
     hi2 = None
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     pbar.close()
 
     # save gaussian model
-    hi2.mapper.save(0)
+    # hi2.mapper.save(0)
     # offline refinement(gloabal BA)
     # traj = None
     traj = hi2.terminate(t+1, fill=False, eval_render=True, gaussian_retrain=False, add_kf=True)

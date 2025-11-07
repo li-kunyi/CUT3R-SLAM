@@ -71,8 +71,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # import ipdb;ipdb.set_trace()
-    depth_file_names = sorted(glob(f'{args.result}/renders_kf/depth_after_opt/*'))
-    color_file_names = sorted(glob(f'{args.result}/renders_kf/image_after_opt/*'))
+    depth_file_names = sorted(glob(f'{args.result}/renders/depth_after_opt/*'))
+    color_file_names = sorted(glob(f'{args.result}/renders/image_after_opt/*'))
     stamps = [float(os.path.basename(i)[:-4]) for i in color_file_names]
     print(f"Found {len(depth_file_names)} depth maps and {len(color_file_names)} color images")
 

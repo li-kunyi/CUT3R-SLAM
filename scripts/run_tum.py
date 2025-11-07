@@ -8,10 +8,10 @@ from shutil import copyfile
 
 
 out = 'outputs/tum'
-dataset_path="/mnt/home/dataset/tum/"
+dataset_path="/root/autodl-fs/tum/"
 os.makedirs(f'{out}/meshes', exist_ok=True)
 seqs = [
-    # "rgbd_dataset_freiburg1_360",
+    "rgbd_dataset_freiburg1_360",
     "rgbd_dataset_freiburg1_desk",
     "rgbd_dataset_freiburg1_desk2",
     "rgbd_dataset_freiburg1_floor",
@@ -29,17 +29,15 @@ for seq in seqs:
     print(name, out)
 
     # run HI-SLAM2
-
     cmd = f'python demo_s.py --imagedir {dataset_path}/{name}/rgb '
     cmd += f'--config config/tum_config.yaml --undistort --calib calib/tum.txt --output {out}/{name} --cropborder 20'
     if not os.path.exists(f'{out}/{name}/traj_full.txt'):
         os.system(cmd)
 
     # eval ate
-    if not os.path.exists(f'{out}/{name}/ape.txt') or len(open(f'{out}/{name}/ape.txt').readlines()) < 10:
-        # os.system(f'evo_ape tum {dataset_path}/{seq}/groundtruth.txt {out}/{name}/traj_full.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
-        os.system(f'evo_ape tum {dataset_path}/{seq}/groundtruth.txt {out}/{name}/traj_kf.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
-        os.system(f'unzip -q {out}/{name}/evo.zip -d {out}/{name}/evo')
+    # os.system(f'evo_ape tum {dataset_path}/{seq}/groundtruth.txt {out}/{name}/traj_full.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
+    os.system(f'evo_ape tum {dataset_path}/{seq}/groundtruth.txt {out}/{name}/traj_kf.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
+    os.system(f'unzip -q {out}/{name}/evo.zip -d {out}/{name}/evo')
     ATE = float([i for i in open(f'{out}/{name}/ape.txt').readlines() if 'rmse' in i][0][-10:-1]) * 100
     metrics['ATE full'] += ATE
     print(f'- full ATE: {ATE:.4f}')

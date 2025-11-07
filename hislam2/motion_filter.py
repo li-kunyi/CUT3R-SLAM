@@ -22,9 +22,10 @@ class MotionFilter:
         self.model = model
         self.keyframes = keyframes
         self.thresh = config["thresh"]
+        self.skip = config["skip"]
         self.init_thresh = config["init_thresh"] if "init_thresh" in config else self.thresh
         self.device = device
-        self.kf_every = 25
+        self.kf_every = 10
 
         self.count = 0
         self.omni_dep = None
@@ -79,7 +80,7 @@ class MotionFilter:
 
         ### always add first frame to the depth keyframes ###
         # self.keyframes.counter.value will increase once self.keyframes.append is called
-        compute_overlap = True
+        compute_overlap = False
         if self.keyframes.counter.value == 0 or last_frame or second_last_frame:
             # depth, normal = self.prior_extractor(inputs[0])
             normal = None
@@ -91,7 +92,7 @@ class MotionFilter:
             feat1 = feat1.squeeze(0)
             self.keyframes.append(tstamp, image[0], pose, 1.0, depth, normal, intrinsics, feat1, pos1)
         else:      
-            if compute_overlap and tstamp % 5 == 0:
+            if compute_overlap and tstamp % self.skip == 0:
                 kf_idx = self.keyframes.counter.value
                 feat0 = self.keyframes.featI[kf_idx - 1]
 
@@ -102,24 +103,34 @@ class MotionFilter:
                 feat1, pos1, _ = self.model.encode_image(view1)
                 feat1 = feat1.squeeze(0)
                 overlap_ratio = compute_patch_overlap_ratio(feat0, feat1)   
+            elif not compute_overlap and tstamp % self.kf_every == 0:
+                kf_idx = self.keyframes.counter.value
+                feat0 = self.keyframes.featI[kf_idx - 1]
+
+                view1 = {}
+                view1['img'] = self.model.normalize(image[0]).unsqueeze(0).to('cuda')  # normalize the image to [-1, 1]
+
+                ##### Encode frames
+                feat1, pos1, _ = self.model.encode_image(view1)
+                feat1 = feat1.squeeze(0)
             else:
                 overlap_ratio = 1.0
                 feat1 = None
                 pos1 = None
                 
-            if (compute_overlap and overlap_ratio < 0.7) or (not compute_overlap and tstamp % self.kf_every == 0):
-                index_min = np.argmax(self.shapeness)
+            if (compute_overlap and overlap_ratio < self.thresh) or (not compute_overlap and tstamp % self.kf_every == 0):
+                # index_min = np.argmax(self.shapeness)
                 # check if the current frame is blurry, if so, use the previous frame(most sharp one)
-                if self.skip_blur and self.shapeness[index_min] > s:
-                    tstamp, image, pose, depth, intrinsics, inputs, feat1, pos1 = self.cache[index_min]
-                self.shapeness = [0]*5
-                self.cache = [None]*5
+                # if self.skip_blur and self.shapeness[index_min] > s:
+                #     tstamp, image, pose, depth, intrinsics, inputs, feat1, pos1 = self.cache[index_min]
+                # self.shapeness = [0]*5
+                # self.cache = [None]*5
 
                 # depth, normal = self.prior_extractor(inputs[0])
                 normal = None
-                self.count = 0
+                # self.count = 0
                 self.keyframes.append(tstamp, image[0], pose, None, depth, normal, intrinsics, feat1, pos1)
-            else:
-                self.shapeness[tstamp%5] = s
-                self.cache[tstamp%5] = [tstamp, image, pose, depth, intrinsics, inputs, feat1, pos1]
-                self.count += 1
+            # else:
+            #     self.shapeness[tstamp%5] = s
+            #     self.cache[tstamp%5] = [tstamp, image, pose, depth, intrinsics, inputs, feat1, pos1]
+            #     self.count += 1

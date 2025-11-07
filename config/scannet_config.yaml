@@ -19,7 +19,8 @@ Cam:
 Tracking:
   motion_filter:
     init_thresh: 4.0
-    thresh: 2.4    # how much motion before considering new keyframe")
+    thresh: 0.7    # how much motion before considering new keyframe")
+    skip: 5
     skip_blur: False
   frontend:
     keyframe_thresh: 4.0  # threshold to create a new keyframe")
@@ -28,7 +29,7 @@ Tracking:
     frontend_radius: 2    # force edges between frames within radius")
     frontend_nms: 1       # non-maximal supression of edges")
     mono_depth_alpha: 0.01
-    iteration: 1000
+    iteration: 1000  # loop closure iterations
   backend:
     backend_thresh: 40.0  # add loop closure edges within this distance (larger is more edges)')
     backend_radius: 2     # connect neighbors within radius (larger is more edges)')
@@ -39,7 +40,7 @@ Tracking:
     pgba_thresh: 22.0     # add loop closure edges within this distance (larger is more edges)')
 
 Mapping:
-  itr_num: 50
+  itr_num: 100
   gaussian_update_every: 50
   gaussian_update_offset: 25
 
@@ -49,7 +50,7 @@ Training:
   lambda_depth: 5.0
   lambda_normal: 0.05
   lambda_tv: 0.
-  lambda_iso: 10.0
+  lambda_iso: 0.0
 
   gaussian_th: 0.1
   gaussian_extent: 1.0
@@ -69,7 +70,7 @@ opt_params:
   opacity_lr: 0.05
   scaling_lr: 0.001
   rotation_lr: 0.001
-  exposure_lr: 0.01
+  exposure_lr: 0.0005
   percent_dense: 0.01
   lambda_dssim: 0.2
-  densify_grad_threshold: 0.0004
+  densify_grad_threshold: 0.0005

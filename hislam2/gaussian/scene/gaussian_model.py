@@ -157,6 +157,9 @@ class GaussianModel:
             points = points[valid_mask]
             colors = colors[valid_mask]
 
+        if points.shape[0] < 5:
+            return None, None, None, None, None
+
         if normal is not None:
             normals = normal.reshape(-1, 3)
             normals = normals[valid_mask]
@@ -171,7 +174,7 @@ class GaussianModel:
         # avg_dist = max(distances.cpu().numpy())
         # voxel_size = avg_dist * 4
         # pcd = pcd.voxel_down_sample(voxel_size=voxel_size)
-        # pcd = pcd.random_down_sample(1.0 / downsample_factor)
+        # pcd = pcd.random_down_sample(1.0 / 4.0)
 
         fused_point_cloud = torch.from_numpy(np.asarray(pcd.points)).float().cuda()
         fused_color = RGB2SH(torch.from_numpy(np.asarray(pcd.colors)).float().cuda())
@@ -363,11 +366,10 @@ class GaussianModel:
         fused_point_cloud, features, scales, rots, opacities = (
             self.create_pcd_from_image(rgb, pointmap=pointmap, normal=normal, conf=conf, init=init)
         )
-        if fused_point_cloud.numel() == 0:
-            return
-        self.extend_from_pcd(
-            fused_point_cloud, features, scales, rots, opacities, submap_idx
-        )
+        if fused_point_cloud is  not None:
+            self.extend_from_pcd(
+                fused_point_cloud, features, scales, rots, opacities, submap_idx
+            )
 
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense
@@ -479,7 +481,7 @@ class GaussianModel:
         PlyData([el]).write(path)
 
     def reset_opacity(self):
-        opacities_new = inverse_sigmoid(torch.ones_like(self.get_opacity) * 0.1)
+        opacities_new = inverse_sigmoid(torch.ones_like(self.get_opacity) * 0.15)
         optimizable_tensors = self.replace_tensor_to_optimizer(opacities_new, "opacity")
         self._opacity = optimizable_tensors["opacity"]
 

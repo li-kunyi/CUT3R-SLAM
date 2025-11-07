@@ -8,14 +8,14 @@ from shutil import copyfile
 
 
 out = 'outputs/7scenes'
-dataset_path="/mnt/home/dataset/7scenes/"
+dataset_path="/root/autodl-fs/7scenes/"
 os.makedirs(f'{out}/meshes', exist_ok=True)
 seqs = [
-    "chess",
-    "fire",
-    "heads",
-    "office",
-    "pumpkin",
+    # "chess",
+    # "fire",
+    # "heads",
+    # "office",
+    # "pumpkin",
     "redkitchen",
     "stairs",
 ]
@@ -27,17 +27,15 @@ for seq in seqs:
     print(name, out)
 
     # run HI-SLAM2
-
     cmd = f'python demo_s.py --imagedir {dataset_path}/{name}/seq-01/color '
-    cmd += f'--config config/7scenes_config.yaml --calib calib/7scenes.txt --output {out}/{name} --cropborder 20'
+    cmd += f'--config config/7scenes_config.yaml --calib calib/7scenes.txt --output {out}/{name}'
     if not os.path.exists(f'{out}/{name}/traj_full.txt'):
         os.system(cmd)
 
     # eval ate
-    if not os.path.exists(f'{out}/{name}/ape.txt') or len(open(f'{out}/{name}/ape.txt').readlines()) < 10:
-        # os.system(f'evo_ape tum {dataset_path}/{seq}/groundtruth.txt {out}/{name}/traj_full.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
-        os.system(f'evo_ape tum {dataset_path}/{seq}/groundtruth.txt {out}/{name}/traj_kf.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
-        os.system(f'unzip -q {out}/{name}/evo.zip -d {out}/{name}/evo')
+    # os.system(f'evo_ape tum {dataset_path}/{seq}/groundtruth.txt {out}/{name}/traj_full.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
+    os.system(f'evo_ape tum {dataset_path}/{name}/seq-01/{name}.txt {out}/{name}/traj_kf.txt -vas --save_results {out}/{name}/evo.zip --no_warnings > {out}/{name}/ape.txt')
+    os.system(f'unzip -q {out}/{name}/evo.zip -d {out}/{name}/evo')
     ATE = float([i for i in open(f'{out}/{name}/ape.txt').readlines() if 'rmse' in i][0][-10:-1]) * 100
     metrics['ATE full'] += ATE
     print(f'- full ATE: {ATE:.4f}')

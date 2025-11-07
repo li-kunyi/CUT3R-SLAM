@@ -23,7 +23,7 @@ class Hi2:
 
         self.config = config
         self.args = args
-        self.verbose = False
+        self.verbose = True
         self.output_dir = args.output
         self.images = {}
         
@@ -46,6 +46,7 @@ class Hi2:
         # mapping and bundle adjustment
         self.mapper = GSBackEnd(self, config, self.args.output)
         self.gs_iter_num = config["Mapping"]["itr_num"]
+        self.do_lc = True if config["Tracking"]["frontend"]["iteration"] > 0 else False
 
         # post processor - fill in poses for non-keyframes
         self.traj_filler = PoseTrajectoryFiller(self)    
@@ -109,7 +110,7 @@ class Hi2:
 
             # backend: point-based loop closure
             lc_did = False
-            if run_backend and not last_frame:
+            if run_backend and not last_frame and self.do_lc:
                 if self.freeze_counter > 0:
                     lc_did, updates = self.backend.run()
                     if lc_did:
@@ -126,9 +127,12 @@ class Hi2:
             self.keyframes.submap_ds[np.array(updated_idx) // 5, np.array(updated_idx) % 5] = updated_pointmap[:, ::self.downsample_ratio, ::self.downsample_ratio]
             self.keyframes.submap_ds[:submap_idx + 1, -1] = self.keyframes.submap_ds[1:submap_idx + 2, 0]
 
-        # backend: mapping and local BA
+        # frontend: mapping and local BA
         if viz_idx is not None:
             self.call_gs(viz_idx, submap_idx, self.gs_iter_num, intrinsics.squeeze())
+        
+            # backend: global mapping
+            # self.mapper.global_BA(iteration_total=5*len(self.mapper.viewpoints), densify=True, opacity_reset=False)
 
 
     def test(self, tstamp, image, intrinsics, depth, pose, second_last_frame=False, last_frame=False):        
@@ -181,12 +185,15 @@ class Hi2:
                     kf_sub_idx = i//5
                     H, W = kf_img.shape[-2:]
 
-                    if (kf_tstamp[i+1] - tstamp) > 60:
-                        N = 2
-                        interval = (kf_tstamp[i+1] - tstamp) // 3
-                    else:
-                        N = 1
-                        interval = (kf_tstamp[i+1] - tstamp) // 2
+                    # if (kf_tstamp[i+1] - tstamp) > 60:
+                    #     N = 2
+                    #     interval = (kf_tstamp[i+1] - tstamp) // 3
+                    # else:
+                    #     N = 1
+                    #     interval = (kf_tstamp[i+1] - tstamp) // 2
+
+                    N = 1
+                    interval = (kf_tstamp[i+1] - tstamp) // 2
 
                     for j in range(N):
                         new_kf_tstamp = int((tstamp + interval * (j + 1)).cpu().item())
