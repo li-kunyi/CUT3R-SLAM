@@ -11,11 +11,11 @@ out = 'outputs/7scenes'
 dataset_path="/root/autodl-fs/7scenes/"
 os.makedirs(f'{out}/meshes', exist_ok=True)
 seqs = [
-    # "chess",
-    # "fire",
-    # "heads",
-    # "office",
-    # "pumpkin",
+    "chess",
+    "fire",
+    "heads",
+    "office",
+    "pumpkin",
     "redkitchen",
     "stairs",
 ]
