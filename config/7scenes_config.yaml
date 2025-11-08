@@ -19,9 +19,10 @@ Cam:
 Tracking:
   motion_filter:
     init_thresh: 4.0
-    thresh: 0.8    # how much motion before considering new keyframe")
+    thresh: 0.7    # how much motion before considering new keyframe")
     skip: 1
     skip_blur: True
+    kf_every: -1
   frontend:
     keyframe_thresh: 4.0  # threshold to create a new keyframe")
     frontend_thresh: 16.0 # add edges between frames whithin this distance")
@@ -50,7 +51,7 @@ Training:
   lambda_depth: 5.0
   lambda_normal: 0.05
   lambda_tv: 0.
-  lambda_iso: 10.0
+  lambda_iso: 0.0
 
   gaussian_th: 0.1
   gaussian_extent: 1.0

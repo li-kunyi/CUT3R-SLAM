@@ -11,14 +11,23 @@ out = 'outputs/7scenes'
 dataset_path="/root/autodl-fs/7scenes/"
 os.makedirs(f'{out}/meshes', exist_ok=True)
 seqs = [
-    "chess",
-    "fire",
-    "heads",
-    "office",
+    # "chess",
+    # "fire",
+    # "heads",
+    # "office",
     "pumpkin",
     "redkitchen",
-    "stairs",
+    # "stairs",
 ]
+kf_every = {
+    "chess": -1,
+    "fire": -1,
+    "heads": 10,
+    "office": -1,
+    "pumpkin": -1,
+    "redkitchen": 10,
+    "stairs": 10,
+}
 
 metrics = defaultdict(float)
 for seq in seqs:
@@ -28,7 +37,7 @@ for seq in seqs:
 
     # run HI-SLAM2
     cmd = f'python demo_s.py --imagedir {dataset_path}/{name}/seq-01/color '
-    cmd += f'--config config/7scenes_config.yaml --calib calib/7scenes.txt --output {out}/{name}'
+    cmd += f'--config config/7scenes_config.yaml --calib calib/7scenes.txt --output {out}/{name} --kf_every {kf_every[name]}'
     if not os.path.exists(f'{out}/{name}/traj_full.txt'):
         os.system(cmd)
 

@@ -25,7 +25,7 @@ class MotionFilter:
         self.skip = config["skip"]
         self.init_thresh = config["init_thresh"] if "init_thresh" in config else self.thresh
         self.device = device
-        self.kf_every = 10
+        self.kf_every = config["kf_every"]
 
         self.count = 0
         self.omni_dep = None
@@ -80,7 +80,10 @@ class MotionFilter:
 
         ### always add first frame to the depth keyframes ###
         # self.keyframes.counter.value will increase once self.keyframes.append is called
-        compute_overlap = False
+        if self.kf_every > 0:
+            compute_overlap = False
+        else:
+            compute_overlap = True
         if self.keyframes.counter.value == 0 or last_frame or second_last_frame:
             # depth, normal = self.prior_extractor(inputs[0])
             normal = None

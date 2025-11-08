@@ -22,6 +22,7 @@ Tracking:
     thresh: 0.7    # how much motion before considering new keyframe")
     skip: 5
     skip_blur: False
+    kf_every: -1
   frontend:
     keyframe_thresh: 4.0  # threshold to create a new keyframe")
     frontend_thresh: 16.0 # add edges between frames whithin this distance")

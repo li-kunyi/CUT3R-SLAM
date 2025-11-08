@@ -134,11 +134,14 @@ if __name__ == '__main__':
     parser.add_argument("--start", type=int, default=0, help="start frame")
     parser.add_argument("--length", type=int, default=100000, help="number of frames to process")
     parser.add_argument('--ckpt_path', type=str, default='./checkpoints/spann3r.pth', help='ckpt path')
+    parser.add_argument("--kf_every", type=int, default=-1, help="select ky every")
 
     args = parser.parse_args()
     os.makedirs(args.output, exist_ok=True)
 
-    cfg = load_config(args.config)    
+    cfg = load_config(args.config)   
+    if args.kf_every > 0:
+        cfg["Tracking"]["motion_filter"]["kf_every"] = args.kf_every
 
     N = len(os.listdir(args.imagedir))
     args.buffer = min(1000, N // 5 + 150) if args.buffer < 0 else args.buffer

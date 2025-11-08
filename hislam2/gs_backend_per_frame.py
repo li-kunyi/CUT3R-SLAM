@@ -217,13 +217,12 @@ class GSBackEnd(mp.Process):
                     "lr": self.config["opt_params"]["pose_lr"]*10,
                     "name": "trans_{}".format(view.uid)})
 
-            with torch.no_grad(): 
-                if self.verbose:
-                    kf_idx = BA_window[idx]  
-                    os.makedirs(f"{self.output_dir}/pre_BA_before", exist_ok = True)
-                    self.viz(view, f"{self.output_dir}/pre_BA_before", kf_idx)
+            # with torch.no_grad(): 
+            #     if self.verbose:
+            #         kf_idx = BA_window[idx]  
+            #         os.makedirs(f"{self.output_dir}/pre_BA_before", exist_ok = True)
+            #         self.viz(view, f"{self.output_dir}/pre_BA_before", kf_idx)
 
-                
         pose_optimizers = torch.optim.Adam(opt_params)
 
         self.gaussians.optimizer.zero_grad(set_to_none=True)
@@ -270,14 +269,14 @@ class GSBackEnd(mp.Process):
             
             # pbar.set_postfix(loss=f"{loss.item():.4f}")
             # pbar.update()
+           
+            pose_optimizers.step()
+            pose_optimizers.zero_grad(set_to_none=True)
+            self.gaussians.optimizer.zero_grad(set_to_none=True)
 
-            with torch.no_grad():                    
-                pose_optimizers.step()
-                pose_optimizers.zero_grad(set_to_none=True)
-                self.gaussians.optimizer.zero_grad(set_to_none=True)
-
-        for viewpoint in viewpoints:
-            update_pose(viewpoint)
+        with torch.no_grad():
+            for viewpoint in viewpoints:
+                update_pose(viewpoint)
 
         w2c_all = []
         gt_depth_all = []
@@ -860,11 +859,13 @@ class GSBackEnd(mp.Process):
 
         for i, idx in enumerate(viz_idx):
             current_w2c = w2c[i]
-            if i > 0:               
-                prev_w2c = w2c[i-1]
-                rel = current_w2c @ torch.inverse(prev_w2c)
-                new_prev_w2c = get_pose(self.viewpoints[viz_idx[i-1]]).clone().detach()
-                current_w2c = rel @ new_prev_w2c
+            
+            if i > 0:         
+                with torch.no_grad():      
+                    prev_w2c = w2c[i-1]
+                    rel = current_w2c @ torch.inverse(prev_w2c)
+                    new_prev_w2c = get_pose(self.viewpoints[viz_idx[i-1]]).clone().detach()
+                    current_w2c = rel @ new_prev_w2c
 
             if idx not in self.viewpoints.keys():
                 tstamp = packet['tstamp'][i].item()
@@ -909,7 +910,7 @@ class GSBackEnd(mp.Process):
                     self.optimization(50, current_window=[self.current_window[-1]], optimize_pose=False, densify=False)
         
         # self.gaussians.densify_and_prune(min_opacity=0.05, densify=False)
-        self.global_BA(iteration_total=5*len(self.viewpoints), densify=True, opacity_reset=False)
+        self.global_BA(iteration_total=10*len(self.viewpoints), densify=True, opacity_reset=False)
 
         return self.data_update(self.h, self.w, self.current_window)
 
@@ -1108,9 +1109,6 @@ class GSBackEnd(mp.Process):
             #     self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=20, return_args=False, alpha_th=0.0)
 
     def finalize(self):  
-        for idx in range(len(self.viewpoints)):
-            self.pose_refine([idx], self.fx, self.fy, self.cx, self.cy, iters=30, return_args=False, alpha_th=0.0)
-
         self.iteration_count = 0       
         self.global_BA(iteration_total=self.gaussians.max_steps)
 
