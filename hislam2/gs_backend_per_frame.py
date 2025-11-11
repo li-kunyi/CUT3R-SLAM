@@ -322,65 +322,6 @@ class GSBackEnd(mp.Process):
 
             return pointmaps[:, ::self.downsample_ratio, ::self.downsample_ratio], alpha_binary[:, ::self.downsample_ratio, ::self.downsample_ratio]
 
-    def pose_refine_v2(self, BA_window, fx, fy, cx, cy, w2cs, alpha_th=0.5):  
-        '''
-            optimize pose jointly with gaussian model and reprojection
-        '''      
-        viewpoints = [self.viewpoints[kf_idx] for kf_idx in BA_window]
-
-        w2c_all = []
-        gt_depth_all = []
-        alpha_all = []
-        first_w2c = get_pose(viewpoints[0]).clone().detach()
-        prev_w2c = w2cs[0]
-        with torch.no_grad(): 
-            for i, viewpoint in enumerate(viewpoints):
-
-                current_w2c = w2cs[i]
-                current_w2c = current_w2c @ torch.inverse(prev_w2c) @ first_w2c
-
-                viewpoint.R = current_w2c[:3, :3]
-                viewpoint.T = current_w2c[:3, 3]
-                viewpoint.R_gt = current_w2c[:3, :3]
-                viewpoint.T_gt = current_w2c[:3, 3]
-
-                gt_depth = viewpoint.depth.to(dtype=torch.float32, device=current_w2c.device)[None]
-
-                render_pkg = render(viewpoint, self.gaussians, self.background)
-                image, depth, alpha = (render_pkg["render"], render_pkg["depth"], render_pkg["mask"])
-
-                if i==0:
-                    alpha_mask = (alpha > alpha_th)
-                    depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
-                    depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
-                    depth_valid = depth[depth_pixel_mask]
-                    gt_valid = gt_depth[depth_pixel_mask]
-
-                    log_scale = (torch.log(depth_valid) - torch.log(gt_valid)).mean()
-                    scale = torch.exp(log_scale)
-                    scale = torch.clamp(scale, 0.95, 1.05)
-
-                gt_depth = scale * gt_depth
-
-                w2c_all.append(current_w2c)
-                gt_depth_all.append(gt_depth)
-                alpha_all.append(alpha)
-
-                if self.verbose:
-                    kf_idx = BA_window[i]  
-                    os.makedirs(f"{self.output_dir}/pre_BA", exist_ok = True)
-                    self.viz(viewpoint, f"{self.output_dir}/pre_BA", kf_idx)
-
-            T_w2c = torch.stack(w2c_all, dim=0)
-            gt_depths = torch.cat(gt_depth_all, dim=0)
-            alpha_all = torch.cat(alpha_all)
-            alpha_binary = (alpha_all <= alpha_th).float()
-
-            # return pointmaps corresponding to updated pose
-            pointmaps = project2world(torch.inverse(T_w2c), gt_depths, fx, fy, cx, cy)
-
-            return pointmaps[:, ::self.downsample_ratio, ::self.downsample_ratio], alpha_binary[:, ::self.downsample_ratio, ::self.downsample_ratio]
-
 
     def pre_optimization(self, BA_window, iters=20, alpha_th=0.9, densify=True):  
         viewpoints = [self.viewpoints[kf_idx] for kf_idx in BA_window]
@@ -895,7 +836,7 @@ class GSBackEnd(mp.Process):
                         self.current_window = self.current_window[1:] + list(current_idx)
                         
                     # self.pre_optimization(self.current_window[-2:], iters=iterations, densify=False)
-                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=100)
+                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=50)
                     pointmap = pointmap.detach().cpu().numpy()
                     conf = conf.detach().cpu().numpy()
                     rgb = imgs_ds[i][None]
@@ -910,7 +851,8 @@ class GSBackEnd(mp.Process):
                     self.optimization(50, current_window=[self.current_window[-1]], optimize_pose=False, densify=False)
         
         # self.gaussians.densify_and_prune(min_opacity=0.05, densify=False)
-        self.global_BA(iteration_total=10*len(self.viewpoints), densify=True, opacity_reset=False)
+        gba_iters = 10*len(self.viewpoints)
+        self.global_BA(iteration_total=gba_iters, densify=True, densify_every=gba_iters//2, opacity_reset=False)
 
         return self.data_update(self.h, self.w, self.current_window)
 
@@ -996,7 +938,7 @@ class GSBackEnd(mp.Process):
             pbar.set_postfix(loss=f"{loss.item():.4f}")
             pbar.update()
     
-    def global_BA(self, iteration_total, densify=True, opacity_reset=True):
+    def global_BA(self, iteration_total, densify=True, densify_every=None, opacity_reset=True):
         '''jointly optimize both gaussians and camera poses: Global BA'''
         opt_params = []
         for idx, view in enumerate(self.viewpoints.values()):
@@ -1062,7 +1004,10 @@ class GSBackEnd(mp.Process):
             gt_depth_normal = gt_depth_normal.permute(2, 0, 1)
             gt_normal_loss = (1 - (depth_normal * gt_depth_normal).sum(dim=0)).mean()
 
-            loss = rgb_loss + self.lambda_depth / 10 * depth_loss + self.lambda_normal * normal_loss + self.lambda_normal * gt_normal_loss
+            if densify_every is not None:
+                loss = rgb_loss + self.lambda_depth / 10 * depth_loss + self.lambda_normal * normal_loss + self.lambda_normal * gt_normal_loss
+            else:
+                loss = rgb_loss + self.lambda_normal * normal_loss
 
             loss.backward()
 
@@ -1071,7 +1016,12 @@ class GSBackEnd(mp.Process):
                     self.gaussians.max_radii2D[visibility_filter] = torch.max(self.gaussians.max_radii2D[visibility_filter], radii[visibility_filter])
                     self.gaussians.add_densification_stats(viewspace_point_tensor, visibility_filter)
 
-                    if (self.iteration_count + 1) % self.gaussian_update_every  == 0:
+                    if densify_every is not None:
+                        do_densify = (iteration == iteration_total // 2)
+                    else:
+                        do_densify = ((self.iteration_count + 1) % self.gaussian_update_every == 0)
+
+                    if do_densify:
                         self.gaussians.densify_and_prune(
                                 self.opt_params.densify_grad_threshold,
                                 self.gaussian_th,
@@ -1115,6 +1065,7 @@ class GSBackEnd(mp.Process):
         self.pcd_viz(self.gaussians.max_steps)
         os.makedirs(f"{self.output_dir}/ckpt", exist_ok=True)
         torch.save((self.gaussians.capture(), self.gaussians.max_steps), f"{self.output_dir}/ckpt/gausaian_ckpt_{self.gaussians.max_steps}.pth")  # save gaussian model
+        self.gaussians.save_ply(f'{self.output_dir}/3dgs_final.ply')
 
         poses_c2w = []
         for view in self.viewpoints.values():

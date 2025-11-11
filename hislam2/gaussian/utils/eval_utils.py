@@ -127,11 +127,13 @@ def eval_rendering_kf(
         image = (image.permute(1, 2, 0) @ frame.exposure_a + frame.exposure_b).permute(2, 0, 1)
         image = torch.clamp(image, 0.0, 1.0)
         depth = rendering["depth"].detach().squeeze().cpu().numpy()
+        gt_depth = frame.depth.detach().squeeze().cpu().numpy()
 
         pred = (image.detach().cpu().numpy().transpose((1, 2, 0)) * 255).astype(np.uint8)
         pred = cv2.cvtColor(pred, cv2.COLOR_BGR2RGB)
         cv2.imwrite(f'{image_save_dir}/{idx:06d}.jpg', pred)
         cv2.imwrite(f'{depth_save_dir}/{idx:06d}.png', np.clip(depth*6553.5, 0, 65535).astype(np.uint16))
+        cv2.imwrite(f'{depth_save_dir}/pseudo_gt_{idx:06d}.png', np.clip(gt_depth*6553.5, 0, 65535).astype(np.uint16))
 
         mask = gtimage > 0
         psnr_score = psnr((image[mask]).unsqueeze(0), (gtimage[mask]).unsqueeze(0))

@@ -575,7 +575,7 @@ class FactorGraph:
         z_matched = pose_matched[:, :3, 2]  # [B, 3]
         cos_angles = F.cosine_similarity(z_matched, z_current.unsqueeze(0), dim=1)  # [B]
 
-        scores = 0.7 * overlap + 0.1 * feat_sim + 0.2 * torch.clamp(cos_angles, min=0.0)  # [B]
+        scores = 0.8 * overlap + 0.2 * feat_sim #+ 0.1 * torch.clamp(cos_angles, min=0.0)  # [B]
         if scores.max() > th:
             return torch.argmax(scores.cpu())
         else:

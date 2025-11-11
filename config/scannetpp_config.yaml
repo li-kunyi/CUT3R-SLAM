@@ -19,7 +19,7 @@ Cam:
 Tracking:
   motion_filter:
     init_thresh: 4.0
-    thresh: 0.8    # how much motion before considering new keyframe")
+    thresh: 0.6    # how much motion before considering new keyframe")
     skip: 1
     skip_blur: False
     kf_every: -1
@@ -48,10 +48,10 @@ Mapping:
 Training:
   gaussian_update_every: 200
 
-  lambda_depth: 5.0
-  lambda_normal: 0.05
+  lambda_depth: 10.0
+  lambda_normal: 0.1
   lambda_tv: 0.
-  lambda_iso: 0.0
+  lambda_iso: 10.0
 
   gaussian_th: 0.1
   gaussian_extent: 1.0

@@ -1,3 +1,32 @@
+// {
+//     // Use IntelliSense to learn about possible attributes.
+//     // Hover to view descriptions of existing attributes.
+//     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+//     "version": "0.2.0",
+//     "configurations": [
+//         {
+//             "name": "Python Debugger: Python File",
+//             "type": "debugpy",
+//             "request": "launch",
+//             // "program": "demo_test.py",
+//             "program": "demo_s.py",
+//             "args": [
+//                 "--imagedir", "/root/autodl-fs/scannetpp/8b5caf3398/iphone/color",
+//                 // "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
+//                 // "--imagedir", "/mnt/home/dataset/7scenes/stairs/seq-01/color",
+//                 // "--imagedir", "data/ScanNet/scene0000_00",
+//                 "--calib", "calib/scannetpp.txt",
+//                 "--config", "config/scannetpp_config.yaml",
+//                 "--output", "outputs/test/8b5caf3398",
+//                 // "--cropborder", "10",
+//                 // "--undistort"
+//                 "--start", "13",
+//                 // "--length", "450"
+//             ]
+//         }
+//     ]
+// }
+
 {
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
@@ -9,19 +38,13 @@
             "type": "debugpy",
             "request": "launch",
             // "program": "demo_test.py",
-            "program": "demo_s.py",
+            "program": "scripts/eval7_scenes_dense.py",
             "args": [
-                "--imagedir", "/root/autodl-fs/scannetpp/8b5caf3398/iphone/color",
-                // "--imagedir", "/home/kunyi/work/data/tum/rgbd_dataset_freiburg1_360/rgb",
-                // "--imagedir", "/mnt/home/dataset/7scenes/chess/seq-01/color",
-                // "--imagedir", "data/ScanNet/scene0000_00",
-                "--calib", "calib/scannetpp.txt",
-                "--config", "config/scannetpp_config.yaml",
-                "--output", "outputs/test/8b5caf3398",
-                // "--cropborder", "10",
-                // "--undistort"
-                "--start", "13",
-                // "--length", "450"
+                "--dataset", "/root/autodl-fs/7scenes/stairs",
+                "--gt", "/root/autodl-fs/7scenes/stairs/seq-01/stairs.txt",
+                "--est", "outputs/7scenes/stairs/traj_kf.txt",
+                "--render_path", "outputs/7scenes/stairs/renders_kf",
+                "--no-viz", 
             ]
         }
     ]

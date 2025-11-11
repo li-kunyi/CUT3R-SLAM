@@ -8,8 +8,14 @@ from collections import defaultdict
 out = 'outputs/scannet'
 os.makedirs(f'{out}/meshes', exist_ok=True)
 metrics = defaultdict(float)
-nrs = ['0000', '0059', '0106', '0169', '0181', '0207']
-# nrs = ['0207']
+nrs = [
+    # '0000', 
+    '0059', 
+    '0106', 
+    '0169', 
+    '0181', 
+    '0207',
+    ]
 
 seqs = [s for s in sorted(glob("/root/autodl-fs/scannet/scene*")) if any(n in s for n in nrs)]
 

@@ -19,7 +19,7 @@ Cam:
 Tracking:
   motion_filter:
     init_thresh: 4.0
-    thresh: 0.7    # how much motion before considering new keyframe")
+    thresh: 0.7    # how much motion before considering new keyframe")  0000, 0059: 0.7, 0106, 0169, 0181, 0207: 0.8
     skip: 5
     skip_blur: False
     kf_every: -1
@@ -30,7 +30,7 @@ Tracking:
     frontend_radius: 2    # force edges between frames within radius")
     frontend_nms: 1       # non-maximal supression of edges")
     mono_depth_alpha: 0.01
-    iteration: 1000  # loop closure iterations
+    iteration: 2000  # loop closure iterations
   backend:
     backend_thresh: 40.0  # add loop closure edges within this distance (larger is more edges)')
     backend_radius: 2     # connect neighbors within radius (larger is more edges)')
@@ -51,7 +51,7 @@ Training:
   lambda_depth: 5.0
   lambda_normal: 0.05
   lambda_tv: 0.
-  lambda_iso: 0.0
+  lambda_iso: 10.0
 
   gaussian_th: 0.1
   gaussian_extent: 1.0
@@ -62,7 +62,7 @@ Training:
   compensate_exposure: True
 
 opt_params:
-  pose_lr: 0.0005
+  pose_lr: 0.0005  # for scene0169, set as 0.0001
   scale_lr: 0.001
   position_lr_init: 0.0005
   position_lr_final: 0.000005

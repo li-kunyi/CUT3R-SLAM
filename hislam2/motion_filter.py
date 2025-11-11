@@ -72,7 +72,7 @@ class MotionFilter:
     def kfFilter(self, tstamp, image, intrinsics=None, pose=None, depth=None, second_last_frame=False, last_frame=False):
         """ main update operation - run on every frame in keyframes """
         # Evaluate the quality of keyframes frames to help decide whether to skip blurry frames
-        s = sharpness(image[0].permute(1,2,0).cpu().numpy())
+        # s = sharpness(image[0].permute(1,2,0).cpu().numpy())
 
         # normalize images
         inputs = image[None].to(self.device) / 255.0

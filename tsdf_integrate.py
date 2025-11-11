@@ -70,7 +70,6 @@ if __name__ == '__main__':
     parser.add_argument('--weight', type=float, default=[1], nargs='+', help='Weight threshold')
     args = parser.parse_args()
 
-    # import ipdb;ipdb.set_trace()
     depth_file_names = sorted(glob(f'{args.result}/renders/depth_after_opt/*'))
     color_file_names = sorted(glob(f'{args.result}/renders/image_after_opt/*'))
     stamps = [float(os.path.basename(i)[:-4]) for i in color_file_names]
