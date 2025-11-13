@@ -41,7 +41,7 @@ class TrackFrontend:
         self.output_dir = slam.output_dir
         self.use_gt = slam.use_gt
 
-        self.conf_th = 0.05
+        self.conf_th = 0.5
         self.downsample_ratio = slam.downsample_ratio
 
     def prepare_input(self, images):

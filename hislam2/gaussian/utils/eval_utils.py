@@ -133,7 +133,7 @@ def eval_rendering_kf(
         pred = cv2.cvtColor(pred, cv2.COLOR_BGR2RGB)
         cv2.imwrite(f'{image_save_dir}/{idx:06d}.jpg', pred)
         cv2.imwrite(f'{depth_save_dir}/{idx:06d}.png', np.clip(depth*6553.5, 0, 65535).astype(np.uint16))
-        cv2.imwrite(f'{depth_save_dir}/pseudo_gt_{idx:06d}.png', np.clip(gt_depth*6553.5, 0, 65535).astype(np.uint16))
+        # cv2.imwrite(f'{depth_save_dir}/pseudo_gt_{idx:06d}.png', np.clip(gt_depth*6553.5, 0, 65535).astype(np.uint16))
 
         mask = gtimage > 0
         psnr_score = psnr((image[mask]).unsqueeze(0), (gtimage[mask]).unsqueeze(0))

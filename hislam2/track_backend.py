@@ -286,7 +286,7 @@ class TrackBackend:
                 pts_next_first = pts_fl_aligned[1:, 0, ...]
                 fl_loss = torch.abs((pts_prev_last - pts_next_first)[confs_mask]).mean()
 
-                loss = 10 * fl_loss + current_lc_loss
+                loss = fl_loss + current_lc_loss
                 
                 loss.backward()
                 optimizer.step()
@@ -446,7 +446,7 @@ class TrackBackend:
                 # align the current pointmap with corresponding pointmap in lc submaps
                 current_lc_loss = torch.abs((pts_current_aligned - pointmaps_lc_fl_aligned[:, -1])).mean()
                 # total loss
-                loss = 10 * fl_loss + current_lc_loss + matched_loss
+                loss = fl_loss + current_lc_loss + matched_loss
 
                 loss.backward()
                 optimizer.step()

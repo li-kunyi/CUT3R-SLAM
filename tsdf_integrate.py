@@ -19,7 +19,8 @@ def to_se3_matrix(pvec):
 def load_intrinsic_extrinsic(result, stamps):
     c = np.load(f'{result}/intrinsics.npy')
     intrinsic = o3d.core.Tensor([[c[0], 0, c[2]], [0, c[1], c[3]], [0, 0, 1]], dtype=o3d.core.Dtype.Float64)
-    poses = np.loadtxt(f'{result}/traj_full.txt')
+    poses = np.loadtxt(f'{result}/traj_kf.txt')
+    stamps = stamps[:len(poses)]
     poses = [np.linalg.inv(to_se3_matrix(poses[int(s)])) for s in stamps]
     poses = list(map(lambda x: o3d.core.Tensor(x, dtype=o3d.core.Dtype.Float64), poses))
     return intrinsic, poses
@@ -70,13 +71,14 @@ if __name__ == '__main__':
     parser.add_argument('--weight', type=float, default=[1], nargs='+', help='Weight threshold')
     args = parser.parse_args()
 
-    depth_file_names = sorted(glob(f'{args.result}/renders/depth_after_opt/*'))
-    color_file_names = sorted(glob(f'{args.result}/renders/image_after_opt/*'))
+    depth_file_names = sorted(glob(f'{args.result}/renders_kf/depth_after_opt/*'))
+    color_file_names = sorted(glob(f'{args.result}/renders_kf/image_after_opt/*'))
     stamps = [float(os.path.basename(i)[:-4]) for i in color_file_names]
     print(f"Found {len(depth_file_names)} depth maps and {len(color_file_names)} color images")
 
     intrinsic, extrinsic = load_intrinsic_extrinsic(args.result, stamps)
-    vbg = integrate(depth_file_names, color_file_names, intrinsic, extrinsic, args)
+    N = len(extrinsic)
+    vbg = integrate(depth_file_names[:N], color_file_names[:N], intrinsic, extrinsic, args)
 
     for w in args.weight:
         mesh = vbg.extract_triangle_mesh(weight_threshold=w)

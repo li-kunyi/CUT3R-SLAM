@@ -19,7 +19,7 @@ Cam:
 Tracking:
   motion_filter:
     init_thresh: 4.0
-    thresh: 0.7    # how much motion before considering new keyframe")  0000, 0059: 0.7, 0106, 0169, 0181, 0207: 0.8
+    thresh: 0.8    # how much motion before considering new keyframe")  0000, 0059: 0.7, 0106, 0169, 0181, 0207: 0.8
     skip: 5
     skip_blur: False
     kf_every: -1
@@ -48,8 +48,8 @@ Mapping:
 Training:
   gaussian_update_every: 200
 
-  lambda_depth: 5.0
-  lambda_normal: 0.05
+  lambda_depth: 10.0
+  lambda_normal: 0.1
   lambda_tv: 0.
   lambda_iso: 10.0
 
@@ -62,7 +62,7 @@ Training:
   compensate_exposure: True
 
 opt_params:
-  pose_lr: 0.0005  # for scene0169, set as 0.0001
+  pose_lr: 0.0001  # for scene0169, set as 0.0001
   scale_lr: 0.001
   position_lr_init: 0.0005
   position_lr_final: 0.000005

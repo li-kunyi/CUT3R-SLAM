@@ -23,7 +23,7 @@ class Hi2:
 
         self.config = config
         self.args = args
-        self.verbose = False
+        self.verbose = True
         self.output_dir = args.output
         self.images = {}
         

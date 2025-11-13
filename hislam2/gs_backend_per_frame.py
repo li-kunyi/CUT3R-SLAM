@@ -261,9 +261,9 @@ class GSBackEnd(mp.Process):
                 
                 rgb_loss_all += existing_ratio * rgb_loss #0.8 * rgb_loss + 0.2 * edge_loss
                 depth_loss_all +=  existing_ratio * depth_loss
-                pose_loss_all += (1 - existing_ratio) * pose_loss
+                pose_loss_all += (2 - existing_ratio) * pose_loss
 
-            loss = (rgb_loss_all + 5 * depth_loss_all + 0.05 * pose_loss_all) / B
+            loss = (5*rgb_loss_all + 1 * depth_loss_all + 0.05 * pose_loss_all) / B
 
             loss.backward()
             
@@ -280,7 +280,7 @@ class GSBackEnd(mp.Process):
 
         w2c_all = []
         gt_depth_all = []
-        alpha_all = []
+        valid_all = []
         if return_args:
             with torch.no_grad(): 
                 for i, viewpoint in enumerate(viewpoints):
@@ -290,22 +290,25 @@ class GSBackEnd(mp.Process):
                     render_pkg = render(viewpoint, self.gaussians, self.background)
                     image, depth, alpha = (render_pkg["render"], render_pkg["depth"], render_pkg["mask"])
 
-                    # alpha_mask = (alpha > alpha_th)
-                    # existing_ratio = alpha_mask.sum() / (alpha_mask.shape[1] * alpha_mask.shape[2])
-                    # depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
-                    # depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
-                    # depth_valid = depth[depth_pixel_mask]
-                    # gt_valid = gt_depth[depth_pixel_mask]
+                    valid_mask = (alpha <= alpha_th)
+                    valid_mask = torch.logical_and(valid_mask, gt_depth > 0.001)
 
-                    # if existing_ratio > 0.3:
-                    #     log_scale = (torch.log(depth_valid) - torch.log(gt_valid)).mean()
-                    #     scale = torch.exp(log_scale)
-                    #     scale = torch.clamp(scale, 0.95, 1.05)
-                    #     gt_depth = scale * gt_depth
+                    alpha_mask = (alpha > alpha_th)
+                    existing_ratio = alpha_mask.sum() / (alpha_mask.shape[1] * alpha_mask.shape[2])
+                    depth_pixel_mask = torch.logical_and(gt_depth > 0.001, depth > 0.001).view(*depth.shape)
+                    depth_pixel_mask = torch.logical_and(depth_pixel_mask, alpha_mask)
+                    depth_valid = depth[depth_pixel_mask]
+                    gt_valid = gt_depth[depth_pixel_mask]
+
+                    if existing_ratio > 0.3:
+                        log_scale = (torch.log(depth_valid) - torch.log(gt_valid)).mean()
+                        scale = torch.exp(log_scale)
+                        scale = torch.clamp(scale, 0.95, 1.05)
+                        gt_depth = scale * gt_depth
 
                     w2c_all.append(current_w2c)
                     gt_depth_all.append(gt_depth)
-                    alpha_all.append(alpha)
+                    valid_all.append(valid_mask)
 
                     if self.verbose:
                         kf_idx = BA_window[i]  
@@ -314,13 +317,13 @@ class GSBackEnd(mp.Process):
 
                 T_w2c = torch.stack(w2c_all, dim=0)
                 gt_depths = torch.cat(gt_depth_all, dim=0)
-                alpha_all = torch.cat(alpha_all)
-                alpha_binary = (alpha_all <= alpha_th).float()
+                valid_binary = torch.cat(valid_all).float()
+                # alpha_binary = (alpha_all <= alpha_th).float()
 
                 # return pointmaps corresponding to updated pose
                 pointmaps = project2world(torch.inverse(T_w2c), gt_depths, fx, fy, cx, cy)
 
-            return pointmaps[:, ::self.downsample_ratio, ::self.downsample_ratio], alpha_binary[:, ::self.downsample_ratio, ::self.downsample_ratio]
+            return pointmaps[:, ::self.downsample_ratio, ::self.downsample_ratio], valid_binary[:, ::self.downsample_ratio, ::self.downsample_ratio]
 
 
     def pre_optimization(self, BA_window, iters=20, alpha_th=0.9, densify=True):  
@@ -529,7 +532,7 @@ class GSBackEnd(mp.Process):
 
                 gt_depth_normal, _ = depth_to_normal(viewpoint, gt_depth.detach(), world_frame=False)
                 gt_depth_normal = gt_depth_normal.permute(2, 0, 1)
-                normal_loss = (1 - (depth_normal * gt_depth_normal).sum(dim=0)).mean()
+                normal_loss = (1 - (depth_normal[:, depth_pixel_mask[0]] * gt_depth_normal[:, depth_pixel_mask[0]]).sum(dim=0)).mean()
                 
                 scaling = self.gaussians.get_scaling[visibility_filter]
                 isotropic_loss = torch.abs(scaling - scaling.mean(dim=1).view(-1, 1)).mean()
@@ -787,7 +790,7 @@ class GSBackEnd(mp.Process):
             
             pointmaps = packet['pointmaps']
             depths = packet["depths"]
-            confs = packet['confs'].numpy()
+            confs = packet['confs']
             c2w = pose_vec_to_matrix(packet["poses"]).cuda()
             w2c = torch.inverse(c2w)
             
@@ -795,8 +798,10 @@ class GSBackEnd(mp.Process):
             imgs_ds = imgs[..., ::self.downsample_ratio, ::self.downsample_ratio]
             pointmaps = F.interpolate(pointmaps.permute(0, 3, 1, 2), size=(H//self.downsample_ratio, W//self.downsample_ratio), mode='bilinear', align_corners=False).permute(0, 2, 3, 1).numpy()
             depths = F.interpolate(depths[None], size=(H, W), mode='bilinear', align_corners=False)[0]
-            _, h1, w1, _ = pointmaps.shape
-
+            confs = F.interpolate(confs[None], size=(H, W), mode='bilinear', align_corners=False)[0]
+            
+            invalid_mask = confs < 0.
+            depths[invalid_mask] = 0.0
 
         for i, idx in enumerate(viz_idx):
             current_w2c = w2c[i]
@@ -836,7 +841,7 @@ class GSBackEnd(mp.Process):
                         self.current_window = self.current_window[1:] + list(current_idx)
                         
                     # self.pre_optimization(self.current_window[-2:], iters=iterations, densify=False)
-                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=50)
+                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=100)
                     pointmap = pointmap.detach().cpu().numpy()
                     conf = conf.detach().cpu().numpy()
                     rgb = imgs_ds[i][None]
@@ -1002,12 +1007,13 @@ class GSBackEnd(mp.Process):
 
             gt_depth_normal, _ = depth_to_normal(viewpoint, gt_depth.detach(), world_frame=False)
             gt_depth_normal = gt_depth_normal.permute(2, 0, 1)
-            gt_normal_loss = (1 - (depth_normal * gt_depth_normal).sum(dim=0)).mean()
+            gt_normal_loss = (1 - (depth_normal[:, depth_pixel_mask[0]] * gt_depth_normal[:, depth_pixel_mask[0]]).sum(dim=0)).mean()
 
             if densify_every is not None:
                 loss = rgb_loss + self.lambda_depth / 10 * depth_loss + self.lambda_normal * normal_loss + self.lambda_normal * gt_normal_loss
             else:
-                loss = rgb_loss + self.lambda_normal * normal_loss
+                loss = rgb_loss + self.lambda_normal / 2 * normal_loss + self.lambda_normal / 2 * gt_normal_loss
+            # loss = rgb_loss + self.lambda_depth / 10 * depth_loss + self.lambda_normal * normal_loss + self.lambda_normal * gt_normal_loss
 
             loss.backward()
 

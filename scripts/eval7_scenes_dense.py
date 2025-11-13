@@ -122,7 +122,7 @@ def depth2point(color, depth, pose_WC, W, H, calib, valid_mask):
     cy1 = cy / resize_params[1] - resize_params[3]
 
     depth = np.nan_to_num(depth, nan=0)
-    depth[~valid_mask] = 0
+    # depth[~valid_mask] = 0
 
     color = o3d.geometry.Image(color)
     depth = o3d.geometry.Image(depth)
@@ -197,6 +197,8 @@ if __name__ == "__main__":
 
         # --- Estimated ---
         depth_path = f'{args.render_path}/depth_after_opt/pseudo_gt_{b:06d}.png'
+        # depth_path = f'{args.render_path}/depth_after_opt/{b:06d}.png'
+
         depth_uint16 = cv2.imread(depth_path, cv2.IMREAD_UNCHANGED)
         depth = depth_uint16.astype(np.float32) / 6553.5
         depth = cv2.resize(depth, (W, H), interpolation=cv2.INTER_NEAREST)

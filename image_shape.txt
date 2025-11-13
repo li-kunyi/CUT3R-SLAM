@@ -1,25 +1,25 @@
-image.shape: (1, 3, 384, 512)
+image.shape: (1, 3, 378, 512)
 
 Args:
 {
-    "imagedir": "/root/autodl-fs/7scenes//heads/seq-01/color",
+    "imagedir": "/root/autodl-fs/scannet/scene0169_00/color",
     "posedir": null,
-    "calib": "calib/7scenes.txt",
-    "config": "config/7scenes_config.yaml",
-    "output": "outputs/7scenes/heads",
+    "calib": "/root/autodl-fs/scannet/scene0169_00/calib.txt",
+    "config": "config/scannet_config.yaml",
+    "output": "outputs/scannet/scene0169_00",
     "gtdepthdir": null,
     "weights": "/root/autodl-tmp/CUT3R-SLAM/pretrained_models/droid.pth",
-    "buffer": 350,
+    "buffer": 556,
     "undistort": false,
-    "cropborder": 0,
+    "cropborder": 20,
     "droidvis": false,
     "gsvis": false,
     "start": 0,
     "length": 100000,
     "ckpt_path": "./checkpoints/spann3r.pth",
-    "kf_every": 10,
+    "kf_every": -1,
     "image_size": [
-        384,
+        368,
         512
     ]
 }
@@ -34,23 +34,23 @@ Cfg:
         "scale_multiplier": 2.0
     },
     "Cam": {
-        "dataset": "7-scenes",
+        "dataset": "scannet",
         "H": 480,
         "W": 640,
-        "fx": 585.0,
-        "fy": 585.0,
-        "cx": 320.0,
-        "cy": 240.0,
+        "fx": 577.590698,
+        "fy": 578.729797,
+        "cx": 318.905426,
+        "cy": 242.683609,
         "png_depth_scale": 1000.0,
-        "crop_edge": 0
+        "crop_edge": 16
     },
     "Tracking": {
         "motion_filter": {
             "init_thresh": 4.0,
-            "thresh": 0.7,
-            "skip": 1,
-            "skip_blur": true,
-            "kf_every": 10
+            "thresh": 0.8,
+            "skip": 5,
+            "skip_blur": false,
+            "kf_every": -1
         },
         "frontend": {
             "keyframe_thresh": 4.0,
@@ -59,7 +59,7 @@ Cfg:
             "frontend_radius": 2,
             "frontend_nms": 1,
             "mono_depth_alpha": 0.01,
-            "iteration": 1000
+            "iteration": 2000
         },
         "backend": {
             "backend_thresh": 40.0,
@@ -73,7 +73,7 @@ Cfg:
         }
     },
     "Mapping": {
-        "itr_num": 200,
+        "itr_num": 100,
         "gaussian_update_every": 50,
         "gaussian_update_offset": 25
     },
@@ -92,7 +92,7 @@ Cfg:
         "compensate_exposure": true
     },
     "opt_params": {
-        "pose_lr": 0.0005,
+        "pose_lr": 0.0001,
         "scale_lr": 0.001,
         "position_lr_init": 0.0005,
         "position_lr_final": 5e-06,

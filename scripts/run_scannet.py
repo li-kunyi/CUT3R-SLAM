@@ -10,8 +10,8 @@ os.makedirs(f'{out}/meshes', exist_ok=True)
 metrics = defaultdict(float)
 nrs = [
     # '0000', 
-    '0059', 
-    '0106', 
+    # '0059', 
+    # '0106', 
     '0169', 
     '0181', 
     '0207',
@@ -44,11 +44,10 @@ for i, seq in enumerate(seqs):
     print(f"- psnr: {psnr['mean_psnr']:.3f}, ssim: {psnr['mean_ssim']:.3f}, lpips: {psnr['mean_lpips']:.3f}")
 
     # run tsdf fusion
-    # w = ['5.0','10.0']
-    # if not os.path.exists(f'{out}/{name}/tsdf_mesh_w{w[-1]}.ply'):
-    #     os.system(f'python tsdf_integrate.py --result {out}/{name} --voxel_size 0.015 --weight {" ".join(w)} > /dev/null')
-    #     for ww in w:
-    #         copyfile(f'{out}/{name}/tsdf_mesh_w{ww}.ply', f'{out}/meshes/{name}_w{ww}.ply')
+    w = ['0.5','2.0','5.0']
+    os.system(f'python tsdf_integrate.py --result {out}/{name} --voxel_size 0.01 --weight {" ".join(w)}')
+        # for ww in w:
+        #     copyfile(f'{out}/{name}/tsdf_mesh_w{ww}.ply', f'{out}/meshes/{name}_w{ww}.ply')
 
 for r in metrics:
     print(f'{r}: \t {metrics[r]/len(seqs):.4f}')
