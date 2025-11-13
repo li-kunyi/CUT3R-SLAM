@@ -47,7 +47,7 @@ Cfg:
     "Tracking": {
         "motion_filter": {
             "init_thresh": 4.0,
-            "thresh": 0.8,
+            "thresh": 0.9,
             "skip": 5,
             "skip_blur": false,
             "kf_every": -1

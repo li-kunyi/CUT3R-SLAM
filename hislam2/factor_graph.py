@@ -559,7 +559,7 @@ class FactorGraph:
         return None
     
     def NMS(self, pointmaps_matched, featI_matched, pose_matched,
-            pointmap_current, featI_current, pose_current, K, th=0.3):
+            pointmap_current, featI_current, pose_current, K, th=0.4):
         pointmaps_matched = pointmaps_matched.cuda()
         pose_matched = pose_matched.cuda()
         pointmap_current = pointmap_current.cuda()

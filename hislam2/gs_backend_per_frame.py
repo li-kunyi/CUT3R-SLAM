@@ -199,7 +199,7 @@ class GSBackEnd(mp.Process):
 
         return alpha_binary
     
-    def pose_refine(self, BA_window, fx, fy, cx, cy, iters=50, lr_ratio=10, return_args=True, alpha_th=0.3):  
+    def pose_refine(self, BA_window, fx, fy, cx, cy, iters=50, lr_ratio=10, return_args=True, alpha_th=0.5):  
         '''
             optimize pose jointly with gaussian model and reprojection
         '''      
@@ -841,7 +841,7 @@ class GSBackEnd(mp.Process):
                         self.current_window = self.current_window[1:] + list(current_idx)
                         
                     # self.pre_optimization(self.current_window[-2:], iters=iterations, densify=False)
-                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=100)
+                    pointmap, conf = self.pose_refine(current_idx, self.fx, self.fy, self.cx, self.cy, iters=50)
                     pointmap = pointmap.detach().cpu().numpy()
                     conf = conf.detach().cpu().numpy()
                     rgb = imgs_ds[i][None]

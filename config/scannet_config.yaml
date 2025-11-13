@@ -19,7 +19,7 @@ Cam:
 Tracking:
   motion_filter:
     init_thresh: 4.0
-    thresh: 0.8    # how much motion before considering new keyframe")  0000, 0059: 0.7, 0106, 0169, 0181, 0207: 0.8
+    thresh: 0.9    # how much motion before considering new keyframe")  0000, 0059: 0.7, 0106, 0169, 0181, 0207: 0.8
     skip: 5
     skip_blur: False
     kf_every: -1
